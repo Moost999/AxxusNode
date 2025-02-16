@@ -1,13 +1,29 @@
-import { Request, Response, RequestHandler } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Request, Response, NextFunction } from 'express';
+import { RequestHandler } from 'express';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-const FIXED_USER_ID = "b6f7d89c-0c5d-4d93-a7db-8f4a0f6b2e9a";
+
+type AuthenticatedRequestHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => Promise<void>;
 
 class AssistantController {
-  public createAssistant: RequestHandler = async (req, res) => {
+  public createAssistant: AuthenticatedRequestHandler = async (req, res) => {
     try {
+      const userId = req.userId;
+      if (!userId) {
+        res.status(401).json({ error: "Não autorizado" });
+        return;
+      }
+
       const { name, model, personality, instructions, whatsappNumber } = req.body;
+      if (!name || !model) {
+        res.status(400).json({ error: "Campos obrigatórios faltando" });
+        return;
+      }
 
       const newAssistant = await prisma.assistant.create({
         data: {
@@ -16,90 +32,127 @@ class AssistantController {
           personality,
           instructions,
           whatsappNumber,
-          userId: FIXED_USER_ID
-        }
+          userId,
+        },
       });
 
       res.status(201).json(newAssistant);
     } catch (error) {
-      console.error('Error creating assistant:', error);
-      res.status(500).json({ error: 'Erro ao criar assistente' });
-    }
-  }
-
-  public getAssistants: RequestHandler = async (req, res) => {
-    try {
-      const assistants = await prisma.assistant.findMany({
-        where: { 
-          userId: "b6f7d89c-0c5d-4d93-a7db-8f4a0f6b2e9a"
-        }
+      console.error("Error creating assistant:", error);
+      res.status(500).json({
+        error: "Erro ao criar assistente",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
       });
-
-       res.json(assistants);
-    } catch (error) {
-      console.error('Error getting assistants:', error);
-       res.status(500).json({ error: 'Erro ao buscar assistentes' });
     }
   }
 
-  public getAssistantById: RequestHandler = async (req, res) => {
+  public getAssistants: AuthenticatedRequestHandler = async (req, res) => {
     try {
+      const userId = req.userId;
+      if (!userId) {
+        res.status(401).json({ error: "Não autorizado" });
+        return;
+      }
+
+      const assistants = await prisma.assistant.findMany({
+        where: { userId },
+      });
+      res.json(assistants);
+    } catch (error) {
+      console.error("Error getting assistants:", error);
+      res.status(500).json({
+        error: "Erro ao buscar assistentes",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    }
+  }
+
+  public getAssistantById: AuthenticatedRequestHandler = async (req, res) => {
+    try {
+      const userId = req.userId;
       const { id } = req.params;
 
       const assistant = await prisma.assistant.findUnique({
         where: { id },
-        include: {
-          conversations: true
-        }
+        include: { conversations: true },
       });
 
-      if (!assistant) {
-         res.status(404).json({ error: 'Assistente não encontrado' });
+      if (!assistant || assistant.userId !== userId) {
+        res.status(404).json({ error: "Assistente não encontrado" });
+        return;
       }
 
-       res.json(assistant);
+      res.json(assistant);
     } catch (error) {
-      console.error('Error getting assistant:', error);
-       res.status(500).json({ error: 'Erro ao buscar assistente' });
+      console.error("Error getting assistant:", error);
+      res.status(500).json({
+        error: "Erro ao buscar assistente",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
     }
   }
 
-  public updateAssistant: RequestHandler = async (req, res) => {
+  public updateAssistant: AuthenticatedRequestHandler = async (req, res) => {
     try {
+      const userId = req.userId;
       const { id } = req.params;
-      const updateData = req.body;
+
+      const existingAssistant = await prisma.assistant.findUnique({
+        where: { id },
+      });
+
+      if (!existingAssistant || existingAssistant.userId !== userId) {
+        res.status(404).json({ error: "Assistente não encontrado" });
+        return;
+      }
 
       const updatedAssistant = await prisma.assistant.update({
         where: { id },
-        data: updateData
+        data: req.body,
       });
 
-       res.json(updatedAssistant);
+      res.json(updatedAssistant);
     } catch (error) {
-      console.error('Error updating assistant:', error);
-       res.status(500).json({ error: 'Erro ao atualizar assistente' });
+      console.error("Error updating assistant:", error);
+      res.status(500).json({
+        error: "Erro ao atualizar assistente",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
     }
   }
 
-  public deleteAssistant: RequestHandler = async (req, res) => {
+  public deleteAssistant: AuthenticatedRequestHandler = async (req, res) => {
     try {
+      const userId = req.userId;
       const { id } = req.params;
 
+      const existingAssistant = await prisma.assistant.findUnique({
+        where: { id },
+      });
+
+      if (!existingAssistant || existingAssistant.userId !== userId) {
+        res.status(404).json({ error: "Assistente não encontrado" });
+        return;
+      }
+
       await prisma.conversation.deleteMany({
-        where: { assistantId: id }
+        where: { assistantId: id },
       });
 
       const deletedAssistant = await prisma.assistant.delete({
-        where: { id }
+        where: { id },
       });
 
-       res.json({
-        message: 'Assistente deletado com sucesso',
-        deletedAssistant
+      res.json({
+        message: "Assistente deletado com sucesso",
+        deletedAssistant,
       });
     } catch (error) {
-      console.error('Error deleting assistant:', error);
-      res.status(500).json({ error: 'Erro ao deletar assistente' });
+      console.error("Error deleting assistant:", error);
+      res.status(500).json({
+        error: "Erro ao deletar assistente",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
     }
   }
 }

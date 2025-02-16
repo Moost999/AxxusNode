@@ -5,6 +5,8 @@ const router: Router = express.Router();
 const whatsappController = new WhatsAppController();
 
 
-router.post("/connect-whatsapp", (req, res) => whatsappController.connectWhatsApp(req, res));
+router.post("/connect-whatsapp", async (req, res) => {
+    await whatsappController.connectWhatsApp(req, res);
+});
 
 export default router;

@@ -1,35 +1,32 @@
-// src/controllers/dashboardController.ts
-import { Request, Response } from 'express';
-import prisma from '../lib/prisma';
+import type { Request, Response, NextFunction } from "express"
+import prisma from "../lib/prisma"
+import { AuthService } from "../services/authService" // Adicione esta importação
 
 export const dashboardController = {
   getStats: async (req: Request, res: Response) => {
     try {
-      const [
-        totalAssistants,
-        activeConversations,
-        messagesProcessed,
-        totalUsers
-      ] = await Promise.all([
-        prisma.assistant.count(),
-        prisma.conversation.count(),
-        prisma.message.count(),
-        prisma.user.count()
-      ]);
+      // Obtenha o userId do middleware
+      const userId = req.userId; // Adicione esta linha
+      console.log('userId: ', userId); // LOG DE DEBUG USERID DASHBOARDCONTROLLER.TS
+      if (!userId) throw new Error("User ID não encontrado");
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId }, // Use userId do contexto
+        select: {
+          tokens: true,
+          availableMessages: true,
+          assistants: { select: { id: true } },
+          conversations: { select: { id: true } },        }
+      });
 
       res.json({
-        totalAssistants,
-        activeConversations,
-        messagesProcessed,
-        totalUsers
+        totalAssistants: user?.assistants.length || 0,
+        activeConversations: user?.conversations.length || 0,
+        tokens: user?.tokens || 0,
+        availableMessages: user?.availableMessages || 0
       });
-
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      res.status(500).json({
-        message: 'Error fetching dashboard stats',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      res.status(401).json({ error: "Não autorizado" });
     }
   }
 };

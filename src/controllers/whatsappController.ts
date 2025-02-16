@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { WhatsAppClient } from '../services/whatsappService';
 import { MessageProcessingService } from '../services/messageProcessingService';
 import { AssistantService } from '../services/assistantService';
+import { error } from 'console';
 
 export class WhatsAppController {
   private whatsappClient: WhatsAppClient;
@@ -23,7 +24,12 @@ export class WhatsAppController {
 
   async connectWhatsApp(req: Request, res: Response) {
     try {
-      const assistantId = "073d2be5-8154-4a3b-a6ae-b28c8cf8b414" // Pegar o assistantId do body ao invés de hardcoded
+      const { assistantId } = req.body;  // Pegar o assistantId do body ao invés de hardcoded
+      
+      if(!assistantId){
+        return res.status(400).json({error: "assistantId não informado"});
+      }
+      
       const qrCode = await this.whatsappClient.initializeClient(assistantId);
     
       res.json({

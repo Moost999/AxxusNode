@@ -1,6 +1,8 @@
 import express, { Router } from 'express';
 import { assistantController } from '../controllers/assistantController';
 
+import { authenticate } from '../middleware/auth';
+
 const router = Router();
 
 // Rotas para Assistants

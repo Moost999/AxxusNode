@@ -4,19 +4,26 @@
 
   datasource db {
     provider = "sqlite"
-    url      = "file:./newdb.db"
+    url      = "file:./novo.db"
   }
 
-  model User {
-    id                String   @id @default(uuid())
-    name              String
-    email             String   @unique
-    tokens            Int      @default(0)
-    availableMessages Int      @default(0)
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-    assistants        Assistant[]
-  }
+model User {
+  id                String      @id @default(uuid())
+  name              String
+  email             String      @unique
+  password          String
+  tokens            Int         @default(0)
+  availableMessages Int         @default(50)
+  adViews           Int         @default(0)
+  lastAdView        DateTime?
+  adCooldown        Int         @default(24)
+  settings          String?     // Armazenado como String para compatibilidade com SQLite
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  assistants        Assistant[]
+  conversations    Conversation[]
+
+}
 
   model Assistant {
     id              String   @id @default(uuid())
@@ -35,6 +42,8 @@
   model Conversation {
     id           String   @id @default(uuid())
     assistantId  String
+    userId  String
+    user         User    @relation(fields: [userId], references: [id])  // Add this relation
     assistant    Assistant @relation(fields: [assistantId], references: [id])
     messages     Message[]
     createdAt    DateTime @default(now())
