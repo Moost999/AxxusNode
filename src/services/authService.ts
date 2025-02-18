@@ -22,7 +22,9 @@ export class AuthService {
         email,
         password: hashedPassword,
         tokens: 100,
-        availableMessages: 100
+        availableMessages: 100,
+        geminiApiKey: '',
+        groqApiKey: '',
       }
     });
 
@@ -53,7 +55,8 @@ export class AuthService {
           adViews: true,
           lastAdView: true,
           adCooldown: true,
-          settings: true,
+          geminiApiKey: true,
+          groqApiKey: true,
           createdAt: true,
           updatedAt: true
         }

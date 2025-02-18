@@ -5,6 +5,7 @@ import userRoutes from './routes/userRoutes';
 import whatsappRoutes from './routes/whatsappRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import authRoutes from './routes/authRoutes';
+import setingRoutes from './routes/settingRoutes';
 import protectRoutes from './routes/protectRoutes';
 import { authenticate } from './middleware/auth';
 import cookieParser from 'cookie-parser';
@@ -39,6 +40,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/protected', protectRoutes);
+app.use('/api/settings', setingRoutes);
 
  // Middleware to protect routes
 app.listen(PORT, () => {

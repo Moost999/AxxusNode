@@ -27,7 +27,9 @@ export async function createUser(data: CreateUserData) {
       tokens: 0,          // Valor padrão conforme schema
       availableMessages: 100, // Valor padrão
       adViews: 0,
-      adCooldown: 24
+      adCooldown: 24,
+      groqApiKey: '',
+      geminiApiKey: ''
     }
   })
 

@@ -8,56 +8,69 @@ datasource db {
 }
 
 model User {
-  id                String     @id @default(auto()) @map("_id") @db.ObjectId
+  id                String         @id @default(auto()) @map("_id") @db.ObjectId
   name              String
-  email             String     @unique
+  email             String         @unique
   password          String
-  tokens            Int        @default(0)
-  availableMessages Int        @default(50)
-  adViews           Int        @default(0)
+  tokens            Int            @default(0)
+  availableMessages Int            @default(50)
+  adViews           Int            @default(0)
   lastAdView        DateTime?
-  adCooldown        Int        @default(24)
-  settings          Json?
+  adCooldown        Int            @default(24)
+  geminiApiKey      String?        @unique
+  groqApiKey        String?        @unique
   assistants        Assistant[]
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  notifications     Notification[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 }
 
 model Assistant {
-  id              String     @id @default(auto()) @map("_id") @db.ObjectId
-  name            String
-  model           String
-  personality     String
-  instructions    String
-  whatsappNumber  String?
-  activeChats     Chat[]     @relation("ActiveChats")
-  archivedChats   Chat[]     @relation("ArchivedChats")
-  files           File[]
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  userId          String     @db.ObjectId
-  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  model          String
+  personality    String
+  instructions   String
+  whatsappNumber String?
+  activeChats    Chat[]   @relation("ActiveChats")
+  archivedChats  Chat[]   @relation("ArchivedChats")
+  files          File[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  userId         String   @db.ObjectId
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Chat {
-  id            String     @id @default(auto()) @map("_id") @db.ObjectId
-  from          String
-  messages      Json
-  pdfSummary    String?
-  fileId        String?    @db.ObjectId
-  lastActivity  DateTime
-  assistant     Assistant  @relation("ActiveChats", fields: [assistantId], references: [id])
-  assistantId   String     @db.ObjectId
-  archivedBy    Assistant? @relation("ArchivedChats", fields: [archivedById], references: [id])
-  archivedById  String?    @db.ObjectId
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  from         String
+  messages     Json
+  pdfSummary   String?
+  fileId       String?    @db.ObjectId
+  lastActivity DateTime
+  assistant    Assistant  @relation("ActiveChats", fields: [assistantId], references: [id])
+  assistantId  String     @db.ObjectId
+  archivedBy   Assistant? @relation("ArchivedChats", fields: [archivedById], references: [id])
+  archivedById String?    @db.ObjectId
 }
 
 model File {
-  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
   name        String
-  content     Bytes      @db.BinData
+  content     Bytes     @db.BinData
   summary     String?
-  uploadedAt  DateTime   @default(now())
-  assistant   Assistant  @relation(fields: [assistantId], references: [id])
-  assistantId String     @db.ObjectId
+  uploadedAt  DateTime  @default(now())
+  assistant   Assistant @relation(fields: [assistantId], references: [id])
+  assistantId String    @db.ObjectId
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  type      String // "ASSISTANT_CREATED", "TOKEN_RECEIVED"
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  metadata  Json? // Dados extras (ex: tokenAmount)
 }
