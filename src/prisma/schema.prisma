@@ -1,68 +1,63 @@
-  generator client {
-    provider = "prisma-client-js"
-  }
-
-  datasource db {
-    provider = "sqlite"
-    url      = "file:./novo.db"
-  }
-
-model User {
-  id                String      @id @default(uuid())
-  name              String
-  email             String      @unique
-  password          String
-  tokens            Int         @default(0)
-  availableMessages Int         @default(50)
-  adViews           Int         @default(0)
-  lastAdView        DateTime?
-  adCooldown        Int         @default(24)
-  settings          String?     // Armazenado como String para compatibilidade com SQLite
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  assistants        Assistant[]
-  conversations    Conversation[]
-
+generator client {
+  provider = "prisma-client-js"
 }
 
-  model Assistant {
-    id              String   @id @default(uuid())
-    name            String
-    model           String
-    personality     String
-    instructions    String
-    whatsappNumber  String?
-    createdAt       DateTime @default(now())
-    updatedAt       DateTime @updatedAt
-    userId          String
-    user            User     @relation(fields: [userId], references: [id])
-    conversations   Conversation[]
-  }
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
 
-  model Conversation {
-    id           String   @id @default(uuid())
-    assistantId  String
-    userId  String
-    user         User    @relation(fields: [userId], references: [id])  // Add this relation
-    assistant    Assistant @relation(fields: [assistantId], references: [id])
-    messages     Message[]
-    createdAt    DateTime @default(now())
-    updatedAt    DateTime @updatedAt
-  }
+model User {
+  id                String     @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  email             String     @unique
+  password          String
+  tokens            Int        @default(0)
+  availableMessages Int        @default(50)
+  adViews           Int        @default(0)
+  lastAdView        DateTime?
+  adCooldown        Int        @default(24)
+  settings          Json?
+  assistants        Assistant[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
 
-  model Message {
-    id             String   @id @default(uuid())
-    conversationId String
-    conversation   Conversation @relation(fields: [conversationId], references: [id])
-    content        String
-    role           String
-    createdAt      DateTime @default(now())
-  }
+model Assistant {
+  id              String     @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  model           String
+  personality     String
+  instructions    String
+  whatsappNumber  String?
+  activeChats     Chat[]     @relation("ActiveChats")
+  archivedChats   Chat[]     @relation("ArchivedChats")
+  files           File[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  userId          String     @db.ObjectId
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-  model PreConfiguredPrompt {
-    id              String   @id @default(uuid())
-    type            String   @unique
-    instructions    String
-    createdAt       DateTime @default(now())
-    updatedAt       DateTime @updatedAt
-  }
+model Chat {
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  from          String
+  messages      Json
+  pdfSummary    String?
+  fileId        String?    @db.ObjectId
+  lastActivity  DateTime
+  assistant     Assistant  @relation("ActiveChats", fields: [assistantId], references: [id])
+  assistantId   String     @db.ObjectId
+  archivedBy    Assistant? @relation("ArchivedChats", fields: [archivedById], references: [id])
+  archivedById  String?    @db.ObjectId
+}
+
+model File {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  content     Bytes      @db.BinData
+  summary     String?
+  uploadedAt  DateTime   @default(now())
+  assistant   Assistant  @relation(fields: [assistantId], references: [id])
+  assistantId String     @db.ObjectId
+}

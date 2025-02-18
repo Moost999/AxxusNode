@@ -1,11 +1,16 @@
-import { Request, Response, NextFunction } from 'express';
-import { RequestHandler } from 'express';
+import { Response, NextFunction } from 'express';
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+import { Request as ExpressRequest } from 'express';
+
+interface AuthenticatedRequest extends ExpressRequest {
+  userId?: string;
+}
+
 type AuthenticatedRequestHandler = (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) => Promise<void>;
@@ -74,7 +79,11 @@ class AssistantController {
 
       const assistant = await prisma.assistant.findUnique({
         where: { id },
-        include: { conversations: true },
+        include: { 
+          activeChats: true,
+          archivedChats: true,
+          files: true
+        },
       });
 
       if (!assistant || assistant.userId !== userId) {
@@ -86,7 +95,7 @@ class AssistantController {
     } catch (error) {
       console.error("Error getting assistant:", error);
       res.status(500).json({
-        error: "Erro ao buscar assistente",
+        error: "Erro ao buscar assistante",
         details: error instanceof Error ? error.message : "Erro desconhecido",
       });
     }
@@ -135,7 +144,18 @@ class AssistantController {
         return;
       }
 
-      await prisma.conversation.deleteMany({
+      // Delete active chats associated with the assistant
+      await prisma.chat.deleteMany({
+        where: { assistantId: id },
+      });
+
+      // Delete archived chats associated with the assistant
+      await prisma.chat.deleteMany({
+        where: { archivedById: id },
+      });
+
+      // Delete files associated with the assistant
+      await prisma.file.deleteMany({
         where: { assistantId: id },
       });
 

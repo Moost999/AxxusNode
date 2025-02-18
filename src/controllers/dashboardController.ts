@@ -1,32 +1,56 @@
-import type { Request, Response, NextFunction } from "express"
-import prisma from "../lib/prisma"
-import { AuthService } from "../services/authService" // Adicione esta importação
+import { Request, Response, NextFunction } from "express";
+import prisma from "../lib/prisma";
+
+// Defina uma interface para a requisição autenticada
+interface AuthenticatedRequest extends Request {
+  userId?: string;
+}
 
 export const dashboardController = {
-  getStats: async (req: Request, res: Response) => {
+  getStats: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Obtenha o userId do middleware
-      const userId = req.userId; // Adicione esta linha
+      const userId = (req as AuthenticatedRequest).userId;
       console.log('userId: ', userId); // LOG DE DEBUG USERID DASHBOARDCONTROLLER.TS
-      if (!userId) throw new Error("User ID não encontrado");
+      
+      if (!userId) {
+        res.status(401).json({ error: "Não autorizado" });
+        return;
+      }
 
       const user = await prisma.user.findUnique({
-        where: { id: userId }, // Use userId do contexto
+        where: { id: userId },
         select: {
           tokens: true,
           availableMessages: true,
-          assistants: { select: { id: true } },
-          conversations: { select: { id: true } },        }
+          assistants: {
+            select: { id: true }
+          },
+        }
+      });
+
+      if (!user) {
+        res.status(404).json({ error: "Usuário não encontrado" });
+        return;
+      }
+
+      // Contagem de chats ativos
+      const activeChatsCount = await prisma.chat.count({
+        where: {
+          assistant: {
+            userId: userId
+          }
+        }
       });
 
       res.json({
-        totalAssistants: user?.assistants.length || 0,
-        activeConversations: user?.conversations.length || 0,
-        tokens: user?.tokens || 0,
-        availableMessages: user?.availableMessages || 0
+        totalAssistants: user.assistants.length,
+        activeConversations: activeChatsCount,
+        tokens: user.tokens,
+        availableMessages: user.availableMessages
       });
     } catch (error) {
-      res.status(401).json({ error: "Não autorizado" });
+      console.error("Erro ao obter estatísticas do dashboard:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
     }
   }
 };
