@@ -9,6 +9,7 @@ import setingRoutes from './routes/settingRoutes';
 import protectRoutes from './routes/protectRoutes';
 import { authenticate } from './middleware/auth';
 import cookieParser from 'cookie-parser';
+import notificationRoute from './routes/notificationRoute';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,7 +20,7 @@ const corsOptions = {
     ? 'https://seusite.com'
     : 'http://localhost:3000',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH','DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Set-Cookie'],
 };
@@ -35,12 +36,13 @@ app.options('*', cors(corsOptions));
 app.use('/api/auth', authRoutes); // Auth routes api\login\ and api\register
 
 app.use('/api', authenticate); // Middleware to protect routes
-app.use('/api/assistants', assistantRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/protected', protectRoutes);
-app.use('/api/settings', setingRoutes);
+app.use('/api/assistants', assistantRoutes); //assistant Routes
+app.use('/api/users', userRoutes); //user Routes
+app.use('/api/whatsapp', whatsappRoutes); //whatsapp Routes
+app.use('/api/dashboard', dashboardRoutes); //dashboard Routes
+app.use('/api/protected', protectRoutes); //protected Routes
+app.use('/api/settings', setingRoutes);   //setting Routes
+app.use('/api/notifications', notificationRoute)  //notification Routes
 
  // Middleware to protect routes
 app.listen(PORT, () => {

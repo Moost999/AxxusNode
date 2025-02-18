@@ -2,6 +2,17 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
+
+// Quando o usuário ganhar tokens (ex: após ver anúncio):
+//await prisma.notification.create({
+  //data: {
+   // userId: userId,
+   // type: "TOKEN_RECEIVED",
+   // message: "Você ganhou 10 tokens por assistir um anúncio!",
+  //  metadata: { tokenAmount: 10 }
+ //// }
+//});
+
 export class AdService {
   async handleAdView(userId: string) {
     try {

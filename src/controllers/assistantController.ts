@@ -40,6 +40,14 @@ class AssistantController {
           userId,
         },
       });
+      // Após criar um assistente:
+      await prisma.notification.create({
+        data: {
+          userId: userId,
+          type: "ASSISTANT_CREATED",
+          message: `Novo assistente "${newAssistant.name}" criado!`,
+        }
+      });
 
       res.status(201).json(newAssistant);
     } catch (error) {
