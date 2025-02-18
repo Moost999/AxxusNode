@@ -44,7 +44,7 @@ class AssistantController {
       await prisma.notification.create({
         data: {
           userId: userId,
-          type: "ASSISTANT_CREATED",
+          type: "Novo Assistente Criado",
           message: `Novo assistente "${newAssistant.name}" criado!`,
         }
       });

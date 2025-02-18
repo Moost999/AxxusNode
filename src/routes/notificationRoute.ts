@@ -1,15 +1,16 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
+import cron from 'node-cron';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Buscar notificações do usuário
+// Buscar notificações não lidas
 router.get('/', authenticate, async (req, res) => {
   try {
     const notifications = await prisma.notification.findMany({
-      where: { userId: req.userId },
+      where: { userId: req.userId, read: false },
       orderBy: { createdAt: 'desc' },
     });
     res.json({ success: true, data: notifications });
@@ -28,6 +29,24 @@ router.patch('/:id/read', authenticate, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to mark notification' });
+  }
+});
+
+
+// Deleção automática (executa a cada hora)
+cron.schedule('0 * * * *', async () => {
+  try {
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+
+    const deletedNotifications = await prisma.notification.deleteMany({
+      where: {
+        createdAt: { lt: twelveHoursAgo },
+      },
+    });
+
+    console.log(`Deleted ${deletedNotifications.count} notifications.`);
+  } catch (error) {
+    console.error('Error deleting notifications:', error);
   }
 });
 

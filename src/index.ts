@@ -10,6 +10,7 @@ import protectRoutes from './routes/protectRoutes';
 import { authenticate } from './middleware/auth';
 import cookieParser from 'cookie-parser';
 import notificationRoute from './routes/notificationRoute';
+import adRoutes from './routes/adRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -43,6 +44,7 @@ app.use('/api/dashboard', dashboardRoutes); //dashboard Routes
 app.use('/api/protected', protectRoutes); //protected Routes
 app.use('/api/settings', setingRoutes);   //setting Routes
 app.use('/api/notifications', notificationRoute)  //notification Routes
+app.use('/api/ads', adRoutes); //ad Routes
 
  // Middleware to protect routes
 app.listen(PORT, () => {

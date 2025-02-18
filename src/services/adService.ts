@@ -1,26 +1,43 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
-
-
-// Quando o usuário ganhar tokens (ex: após ver anúncio):
-//await prisma.notification.create({
-  //data: {
-   // userId: userId,
-   // type: "TOKEN_RECEIVED",
-   // message: "Você ganhou 10 tokens por assistir um anúncio!",
-  //  metadata: { tokenAmount: 10 }
- //// }
-//});
 
 export class AdService {
   async handleAdView(userId: string) {
     try {
-      // Generate random rewards
-      const tokenReward = Math.floor(Math.random() * (20 - 15 + 1)) + 15 // Random number between 15 and 20
-      const messageReward = 10 // Fixed 10 messages per ad view
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { adViews: true, lastAdView: true }
+      })
 
-      // Update user data
+      if (!user) {
+        throw new Error('User not found')
+      }
+
+      // Verificar limite de 10 anúncios a cada 30 minutos
+      if (user.lastAdView) {
+        const lastView = new Date(user.lastAdView)
+        const now = new Date()
+        const diffMinutes = Math.floor((now.getTime() - lastView.getTime()) / (1000 * 60))
+
+        if (diffMinutes < 30 && user.adViews >= 10) {
+          throw new Error(`You can only watch 10 ads every 30 minutes. Wait ${30 - diffMinutes} minutes.`)
+        }
+
+        // Resetar contagem após 30 minutos
+        if (diffMinutes >= 30) {
+          await prisma.user.update({
+            where: { id: userId },
+            data: { adViews: 0 }
+          })
+        }
+      }
+
+      // Gerar recompensas
+      const tokenReward = Math.floor(Math.random() * (20 - 15 + 1)) + 15
+      const messageReward = 10
+
+      // Atualizar usuário
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: {
@@ -36,9 +53,18 @@ export class AdService {
         },
       })
 
-      // Here you would integrate with a real ad service
-      // For example, logging the ad view or triggering the ad display
-      await this.logAdView(userId)
+      // Criar notificação
+      await prisma.notification.create({
+        data: {
+          userId: userId,
+          type: 'Recompensa por assistir a um anúncio',
+          message: `Você ganhou ${tokenReward} tokens e ${messageReward} mensagens por assistir a um anúncio!`,
+          metadata: { 
+            tokenAmount: tokenReward,
+            messageAmount: messageReward
+          }
+        }
+      })
 
       return {
         tokenReward,
@@ -47,17 +73,10 @@ export class AdService {
         newMessageBalance: updatedUser.availableMessages,
         totalAdViews: updatedUser.adViews,
       }
+
     } catch (error) {
-      console.error("Error handling ad view:", error)
-      throw new Error("Failed to process ad view")
+      console.error('Error handling ad view:', error)
+      throw error
     }
   }
-
-  private async logAdView(userId: string) {
-    // This is where you would integrate with a real ad service
-    // For example, sending a request to an ad network API
-    console.log(`Ad view logged for user ${userId}`)
-    // Implement actual ad service integration here
-  }
 }
-
