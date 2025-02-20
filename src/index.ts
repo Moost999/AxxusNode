@@ -17,26 +17,20 @@ import { authenticate } from './middleware/auth';
 const app: Application = express();
 const PORT = process.env.PORT || 3001;
 
-// Lista de origens permitidas (substitua pelo seu domínio de frontend)
-const allowedOrigins = [
-  'https://axxus-front.vercel.app',
-];
+const allowedOrigins = ['https://axxus-front.vercel.app'];
 
-// Configuração do CORS
 const corsOptions = {
   origin: allowedOrigins,
-  credentials: true, // Permite envio de cookies
+  credentials: true, // Permitir cookies na requisição
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   exposedHeaders: ['Set-Cookie'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
 };
 
-// Aplicar CORS antes de qualquer rota
+// 1️⃣ **CORS DEVE VIR PRIMEIRO**
 app.use(cors(corsOptions));
 
-// Middleware global para garantir que os headers CORS sejam enviados corretamente
+// 2️⃣ **Forçar Headers antes de qualquer middleware**
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -45,20 +39,17 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Middleware para permitir respostas automáticas para OPTIONS
-app.options('*', cors(corsOptions));
-
-// Outros Middlewares
+// 3️⃣ **Habilitar JSON e Cookies**
 app.use(express.json());
 app.use(cookieParser());
 
-// Rotas Públicas (sem autenticação)
+// 4️⃣ **Rotas Públicas SEM Autenticação**
 app.use('/api/auth', authRoutes);
 
-// Middleware de autenticação para rotas protegidas
+// 5️⃣ **Middleware de autenticação para proteger as próximas rotas**
 app.use('/api', authenticate);
 
-// Rotas Protegidas
+// 6️⃣ **Rotas Protegidas**
 app.use('/api/assistants', assistantRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
@@ -68,13 +59,12 @@ app.use('/api/settings', settingRoutes);
 app.use('/api/notifications', notificationRoute);
 app.use('/api/ads', adRoutes);
 
-// Middleware de tratamento de erros
+// 7️⃣ **Middleware Global de Erros (Deixa no final)**
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Iniciar o servidor
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
