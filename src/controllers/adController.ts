@@ -1,98 +1,185 @@
-import { Request, Response } from 'express'
-import { AdService } from '../services/adService'
-import { authenticate } from '../middleware/auth'
-import prisma from '../lib/prisma'
-const adService = new AdService()
+import { Response, NextFunction } from 'express';
+import { Request as ExpressRequest } from 'express';
+import { prisma } from '../lib/prisma';
 
-export class AdController {
-  static async viewAd(req: Request, res: Response) {
+interface AuthenticatedRequest extends ExpressRequest {
+  userId?: string;
+}
+
+type AuthenticatedRequestHandler = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => Promise<void>;
+
+class AssistantController {
+  public createAssistant: AuthenticatedRequestHandler = async (req, res) => {
     try {
-      const userId = req.userId
+      const userId = req.userId;
       if (!userId) {
-         res.status(401).json({ error: 'User not authenticated' })
-         return
+        res.status(401).json({ error: "Não autorizado" });
+        return;
       }
 
-      const { timeViewed, adClicked } = req.body;
-      
-      // Verificar se o usuário cumpriu os requisitos
-      if (!adClicked) {
-        res.status(400).json({
-          success: false,
-          error: 'Você precisa clicar em pelo menos um anúncio'
-        });
-        return
-      }
-      
-      if (timeViewed < parseInt(process.env.AD_MIN_VIEW_TIME || '60000') / 1000) {
-         res.status(400).json({
-          success: false, 
-          error: 'Você precisa assistir o anúncio por pelo menos 1 minuto'
-        });
-        return
+      const { name, model, personality, instructions, whatsappNumber } = req.body;
+      if (!name || !model) {
+        res.status(400).json({ error: "Campos obrigatórios faltando" });
+        return;
       }
 
-      const result = await adService.handleAdView(userId)
+      const newAssistant = await prisma.assistant.create({
+        data: {
+          name,
+          model,
+          personality,
+          instructions,
+          whatsappNumber,
+          userId,
+        },
+      });
+      // Após criar um assistente:
+      await prisma.notification.create({
+        data: {
+          userId: userId,
+          type: "Novo Assistente Criado",
+          message: `Novo assistente "${newAssistant.name}" criado!`,
+        }
+      });
 
-      res.json({
-        success: true,
-        message: 'Ad view processed successfully',
-        data: result
-      })
-
+      res.status(201).json(newAssistant);
     } catch (error) {
-      console.error('Error in ad view controller:', error)
-      res.status(400).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to process ad view'
-      })
+      console.error("Error creating assistant:", error);
+      res.status(500).json({
+        error: "Erro ao criar assistente",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
     }
   }
 
-  static async getAdStatus(req: Request, res: Response) {
+  public getAssistants: AuthenticatedRequestHandler = async (req, res) => {
     try {
-      const userId = req.userId
+      const userId = req.userId;
       if (!userId) {
-         res.status(401).json({ error: 'User not authenticated' })
-          return
-        }
-  
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          adViews: true,
-          lastAdView: true
-        }
-      })
-  
-      if (!user) {
-         res.status(404).json({ error: 'User not found' })
-          return
-        }
-  
-        let cooldown = 0;
-        if (user.lastAdView && user.adViews >= parseInt(process.env.AD_MAX_VIEWS_PER_PERIOD || '10')) {
-          const lastView = new Date(user.lastAdView)
-          const now = new Date()
-          const diffMinutes = Math.floor((now.getTime() - lastView.getTime()) / (1000 * 60))
-          const adPeriodMinutes = parseInt(process.env.AD_PERIOD_MINUTES || '30');
-          cooldown = Math.max(0, adPeriodMinutes - diffMinutes)
-        }
-        
-        res.json({
-          success: true,
-          data: {
-            adViews: user.adViews,
-            cooldown,
-            canWatchAd: cooldown === 0 && user.adViews < parseInt(process.env.AD_MAX_VIEWS_PER_PERIOD || '10')
-          }
-        })
+        res.status(401).json({ error: "Não autorizado" });
+        return;
+      }
+
+      const assistants = await prisma.assistant.findMany({
+        where: { userId },
+      });
+      res.json(assistants);
     } catch (error) {
-      console.error('Error getting ad status:', error)
+      console.error("Error getting assistants:", error);
       res.status(500).json({
-        success: false,
-        error: 'Failed to get ad status'
-      })
+        error: "Erro ao buscar assistentes",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    }
+  }
+
+  public getAssistantById: AuthenticatedRequestHandler = async (req, res) => {
+    try {
+      const userId = req.userId;
+      const { id } = req.params;
+
+      const assistant = await prisma.assistant.findUnique({
+        where: { id },
+        include: { 
+          activeChats: true,
+          archivedChats: true,
+          files: true
+        },
+      });
+
+      if (!assistant || assistant.userId !== userId) {
+        res.status(404).json({ error: "Assistente não encontrado" });
+        return;
+      }
+
+      res.json(assistant);
+    } catch (error) {
+      console.error("Error getting assistant:", error);
+      res.status(500).json({
+        error: "Erro ao buscar assistante",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    }
+  }
+
+  public updateAssistant: AuthenticatedRequestHandler = async (req, res) => {
+    try {
+      const userId = req.userId;
+      const { id } = req.params;
+
+      const existingAssistant = await prisma.assistant.findUnique({
+        where: { id },
+      });
+
+      if (!existingAssistant || existingAssistant.userId !== userId) {
+        res.status(404).json({ error: "Assistente não encontrado" });
+        return;
+      }
+
+      const updatedAssistant = await prisma.assistant.update({
+        where: { id },
+        data: req.body,
+      });
+
+      res.json(updatedAssistant);
+    } catch (error) {
+      console.error("Error updating assistant:", error);
+      res.status(500).json({
+        error: "Erro ao atualizar assistente",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    }
+  }
+
+  public deleteAssistant: AuthenticatedRequestHandler = async (req, res) => {
+    try {
+      const userId = req.userId;
+      const { id } = req.params;
+
+      const existingAssistant = await prisma.assistant.findUnique({
+        where: { id },
+      });
+
+      if (!existingAssistant || existingAssistant.userId !== userId) {
+        res.status(404).json({ error: "Assistente não encontrado" });
+        return;
+      }
+
+      // Delete active chats associated with the assistant
+      await prisma.chat.deleteMany({
+        where: { assistantId: id },
+      });
+
+      // Delete archived chats associated with the assistant
+      await prisma.chat.deleteMany({
+        where: { archivedById: id },
+      });
+
+      // Delete files associated with the assistant
+      await prisma.file.deleteMany({
+        where: { assistantId: id },
+      });
+
+      const deletedAssistant = await prisma.assistant.delete({
+        where: { id },
+      });
+
+      res.json({
+        message: "Assistente deletado com sucesso",
+        deletedAssistant,
+      });
+    } catch (error) {
+      console.error("Error deleting assistant:", error);
+      res.status(500).json({
+        error: "Erro ao deletar assistente",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
     }
   }
 }
+
+export const assistantController = new AssistantController();
