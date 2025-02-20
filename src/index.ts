@@ -15,6 +15,7 @@ import adRoutes from './routes/adRoutes';
 
 // Middleware de autenticação
 import { authenticate } from './middleware/auth';
+import { compareSync } from 'bcryptjs';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3001;

@@ -12,7 +12,8 @@
       "dest": "dist/index.js",
       "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       "headers": {
-        "Acess-Control-Allow-Origin": "*"
+        "Acess-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
       }}
   ],
   "env": {
