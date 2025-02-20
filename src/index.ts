@@ -55,6 +55,7 @@ app.use(express.urlencoded({ extended: true })); // Para parsear URL-encoded bod
 // 4️⃣ Middleware para Forçar JSON Responses
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Max-Age', '86400');
   next();
 });
 
