@@ -2,7 +2,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
-// Importações das rotas
+
 import assistantRoutes from './routes/assistantRoutes';
 import userRoutes from './routes/userRoutes';
 import whatsappRoutes from './routes/whatsappRoutes';
