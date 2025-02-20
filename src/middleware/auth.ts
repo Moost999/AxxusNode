@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express"
 import { AuthService } from "../services/authService"
 import { PrismaClient } from "@prisma/client"
 
+const allowedOrigins = ["https://axxus-front.vercel.app"] // Add your frontend URL here
 const authService = new AuthService()
 const prisma = new PrismaClient()
 
@@ -14,17 +15,26 @@ declare global {
   }
 }
 
+// Atualize o middleware de autenticação
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Leia o token dos cookies
     const token = req.cookies.token;
     if (!token) throw new Error('Token não encontrado');
 
     const user = await authService.validateToken(token);
-    req.userId = user.id; // Injeta userId na requisição
+    req.userId = user.id;
+
+    // Adicione headers CORS mesmo em erros
+    res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
     next();
   } catch (error) {
-    res.status(401).json({ error: "Token inválido" });
+    res
+      .status(401)
+      .header('Access-Control-Allow-Origin', allowedOrigins[0])
+      .header('Access-Control-Allow-Credentials', 'true')
+      .json({ error: "Token inválido" });
   }
 };
 

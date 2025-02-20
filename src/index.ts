@@ -17,25 +17,41 @@ import { authenticate } from './middleware/auth';
 const app: Application = express();
 const PORT = process.env.PORT || 3001;
 
-const allowedOrigins = ['https://axxus-front.vercel.app'];
+// Atualize a configuração CORS
+const allowedOrigins = [
+  'https://axxus-front.vercel.app',
+  'https://axxus-front-git-main-axxus.vercel.app',];
 
 const corsOptions = {
-  origin: allowedOrigins,
-  credentials: true, // Permitir cookies na requisição
+  origin: function(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   exposedHeaders: ['Set-Cookie'],
+  optionsSuccessStatus: 204
 };
 
-// 1️⃣ **CORS DEVE VIR PRIMEIRO**
+// Middleware CORS deve vir primeiro
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Habilitar preflight para todas as rotas
 
-// 2️⃣ **Forçar Headers antes de qualquer middleware**
+// Middleware manual para headers
 app.use((req: Request, res: Response, next: NextFunction) => {
-  res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
+  const origin = req.headers.origin || '';
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
+  res.header('Vary', 'Origin');
+  
   next();
 });
 
