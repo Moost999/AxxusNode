@@ -32,6 +32,20 @@ app.use(cookieParser());
 app.use(express.json());
 // Configure CORS
 app.options('*', cors(corsOptions));
+// Middleware para enviar cabeçalhos CORS manualmente
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', `${process.env.VERCEL_API}`);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+     res.status(204).send();
+      return
+    }
+
+  next();
+});
 
 
 app.use('/api/auth', authRoutes); // Auth routes api\login\ and api\register
