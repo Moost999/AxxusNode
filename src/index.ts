@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import assistantRoutes from './routes/assistantRoutes';
 import userRoutes from './routes/userRoutes';
@@ -12,55 +12,44 @@ import cookieParser from 'cookie-parser';
 import notificationRoute from './routes/notificationRoute';
 import adRoutes from './routes/adRoutes';
 
-const app = express();
+const app: Application = express();
 const PORT = process.env.PORT || 3001;
 
-
+// Simplified CORS configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
     ? process.env.VERCEL_URL_FRONT
     : 'http://localhost:3000',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH','DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   exposedHeaders: ['Set-Cookie'],
 };
 
-
-app.use(cors(corsOptions)); // Set up CORS
-app.use(cookieParser());
+// Apply middlewares
 app.use(express.json());
-// Configure CORS
-app.options('*', cors(corsOptions));
-// Middleware para enviar cabeçalhos CORS manualmente
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', `${process.env.VERCEL_API}`);
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
+app.use(cookieParser());
+app.use(cors(corsOptions));
 
-  if (req.method === 'OPTIONS') {
-     res.status(204).send();
-      return
-    }
-
-  next();
+// Error handling middleware
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
 });
 
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api', authenticate);
+app.use('/api/assistants', assistantRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/protected', protectRoutes);
+app.use('/api/settings', setingRoutes);
+app.use('/api/notifications', notificationRoute);
+app.use('/api/ads', adRoutes);
 
-app.use('/api/auth', authRoutes); // Auth routes api\login\ and api\register
-
-app.use('/api', authenticate); // Middleware to protect routes
-app.use('/api/assistants', assistantRoutes); //assistant Routes
-app.use('/api/users', userRoutes); //user Routes
-app.use('/api/whatsapp', whatsappRoutes); //whatsapp Routes
-app.use('/api/dashboard', dashboardRoutes); //dashboard Routes
-app.use('/api/protected', protectRoutes); //protected Routes
-app.use('/api/settings', setingRoutes);   //setting Routes
-app.use('/api/notifications', notificationRoute)  //notification Routes
-app.use('/api/ads', adRoutes); //ad Routes
-
- // Middleware to protect routes
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log('CORS configured for:', corsOptions.origin);
 });
