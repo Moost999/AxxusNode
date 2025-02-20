@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3001;
 
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
-    ? process.env.VERCEL_API
+    ? [process.env.VERCEL_API, process.env.VERCEL_URL_FRONT].filter((url): url is string => url !== undefined)
     : 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH','DELETE'],
