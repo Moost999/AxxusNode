@@ -13,6 +13,25 @@ export class AdController {
          return
       }
 
+      const { timeViewed, adClicked } = req.body;
+      
+      // Verificar se o usuário cumpriu os requisitos
+      if (!adClicked) {
+        res.status(400).json({
+          success: false,
+          error: 'Você precisa clicar em pelo menos um anúncio'
+        });
+        return
+      }
+      
+      if (timeViewed < parseInt(process.env.AD_MIN_VIEW_TIME || '60000') / 1000) {
+         res.status(400).json({
+          success: false, 
+          error: 'Você precisa assistir o anúncio por pelo menos 1 minuto'
+        });
+        return
+      }
+
       const result = await adService.handleAdView(userId)
 
       res.json({
@@ -51,24 +70,23 @@ export class AdController {
           return
         }
   
-      // Calcular cooldown
-      let cooldown = 0
-      if (user.lastAdView) {
-        const lastView = new Date(user.lastAdView)
-        const now = new Date()
-        const diffMinutes = Math.floor((now.getTime() - lastView.getTime()) / (1000 * 60))
-        cooldown = Math.max(0, 30 - diffMinutes)
-      }
-  
-      res.json({
-        success: true,
-        data: {
-          adViews: user.adViews,
-          cooldown,
-          canWatchAd: user.adViews < 10
+        let cooldown = 0;
+        if (user.lastAdView && user.adViews >= parseInt(process.env.AD_MAX_VIEWS_PER_PERIOD || '10')) {
+          const lastView = new Date(user.lastAdView)
+          const now = new Date()
+          const diffMinutes = Math.floor((now.getTime() - lastView.getTime()) / (1000 * 60))
+          const adPeriodMinutes = parseInt(process.env.AD_PERIOD_MINUTES || '30');
+          cooldown = Math.max(0, adPeriodMinutes - diffMinutes)
         }
-      })
-  
+        
+        res.json({
+          success: true,
+          data: {
+            adViews: user.adViews,
+            cooldown,
+            canWatchAd: cooldown === 0 && user.adViews < parseInt(process.env.AD_MAX_VIEWS_PER_PERIOD || '10')
+          }
+        })
     } catch (error) {
       console.error('Error getting ad status:', error)
       res.status(500).json({

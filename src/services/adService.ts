@@ -14,18 +14,21 @@ export class AdService {
         throw new Error('User not found')
       }
 
-      // Verificar limite de 10 anúncios a cada 30 minutos
+      const maxViewsPerPeriod = parseInt(process.env.AD_MAX_VIEWS_PER_PERIOD || '10');
+      const adPeriodMinutes = parseInt(process.env.AD_PERIOD_MINUTES || '30');
+
+      // Verificar limite de anúncios no período
       if (user.lastAdView) {
         const lastView = new Date(user.lastAdView)
         const now = new Date()
         const diffMinutes = Math.floor((now.getTime() - lastView.getTime()) / (1000 * 60))
 
-        if (diffMinutes < 30 && user.adViews >= 10) {
-          throw new Error(`You can only watch 10 ads every 30 minutes. Wait ${30 - diffMinutes} minutes.`)
+        if (diffMinutes < adPeriodMinutes && user.adViews >= maxViewsPerPeriod) {
+          throw new Error(`You can only watch ${maxViewsPerPeriod} ads every ${adPeriodMinutes} minutes. Wait ${adPeriodMinutes - diffMinutes} minutes.`)
         }
 
-        // Resetar contagem após 30 minutos
-        if (diffMinutes >= 30) {
+        // Resetar contagem após o período definido
+        if (diffMinutes >= adPeriodMinutes) {
           await prisma.user.update({
             where: { id: userId },
             data: { adViews: 0 }
