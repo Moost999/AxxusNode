@@ -20,7 +20,8 @@ const PORT = process.env.PORT || 3001;
 // Atualize a configuração CORS
 const allowedOrigins = [
   'https://axxus-front.vercel.app',
-  'https://axxus-front-git-main-axxus.vercel.app',];
+  'https://axxus-front-git-main-axxus.vercel.app',
+  "http://192.168.0.2:3000"];
 
 const corsOptions = {
   origin: function(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {

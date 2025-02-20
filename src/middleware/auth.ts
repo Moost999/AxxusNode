@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express"
 import { AuthService } from "../services/authService"
 import { PrismaClient } from "@prisma/client"
 
-const allowedOrigins = ["https://axxus-front.vercel.app"] // Add your frontend URL here
+const allowedOrigins = ["https://axxus-front.vercel.app", "http://192.168.0.2:3000"] // Add your frontend URL here
 const authService = new AuthService()
 const prisma = new PrismaClient()
 
