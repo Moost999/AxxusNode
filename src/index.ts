@@ -46,7 +46,8 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // Habilita preflight para todas as rotas
 
 // 3️⃣ Middlewares Essenciais
-app.use(express.json()); // Para parsear JSON no corpo das requisições
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));; // Para parsear JSON no corpo das requisições
 app.use(cookieParser()); // Para parsear cookies
 app.use(express.urlencoded({ extended: true })); // Para parsear URL-encoded bodies
 
