@@ -15,21 +15,36 @@ import adRoutes from './routes/adRoutes';
 const app: Application = express();
 const PORT = process.env.PORT || 3001;
 
-// Simplified CORS configuration
+// Configuração CORS simplificada
+const allowedOrigins = [
+  'https://axxus-front.vercel.app',
+];
+
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? process.env.VERCEL_URL_FRONT
-    : 'http://localhost:3000',
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Permitir requests sem origin (como mobile apps, postman, etc)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   exposedHeaders: ['Set-Cookie'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
-// Apply middlewares
+// Aplicar middlewares na ordem correta
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors(corsOptions));
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -37,7 +52,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Routes
+// Rotas
 app.use('/api/auth', authRoutes);
 app.use('/api', authenticate);
 app.use('/api/assistants', assistantRoutes);
@@ -51,5 +66,4 @@ app.use('/api/ads', adRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  console.log('CORS configured for:', corsOptions.origin);
 });
