@@ -39,7 +39,6 @@ const corsOptions: cors.CorsOptions = {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200,
-  maxAge: 86400
 };
 
 // 2️⃣ Aplica CORS antes de outros middlewares
@@ -55,7 +54,6 @@ app.use(express.urlencoded({ extended: true })); // Para parsear URL-encoded bod
 // 4️⃣ Middleware para Forçar JSON Responses
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Access-Control-Max-Age', '86400');
   next();
 });
 
