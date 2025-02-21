@@ -38,7 +38,8 @@ const corsOptions: cors.CorsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', "Accept"],
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  exposedHeaders: "Set-Cookie",
 };
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', time: new Date().toISOString() });
