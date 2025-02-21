@@ -29,8 +29,9 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
     // Se for uma requisição OPTIONS, retorna OK
     if (req.method === "OPTIONS") {
-      return res.status(200).end()
-    }
+       res.status(200).end()
+      return
+      }
 
     const token = req.cookies.token
     if (!token) {
@@ -72,10 +73,11 @@ export const checkMessageQuota = async (req: Request, res: Response, next: NextF
     })
 
     if (!user || user.availableMessages <= 0) {
-      return res.status(402).json({
+       res.status(402).json({
         success: false,
         message: "No available messages. Watch ads to get more credits.",
       })
+      return
     }
     next()
   } catch (error) {
