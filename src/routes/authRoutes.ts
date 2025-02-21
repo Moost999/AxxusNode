@@ -24,13 +24,14 @@ router.post("/api/auth/login", async (req, res) => {
 
     console.log("Resposta do login:", authResponse); // Depuração
 
-    res.cookie("token", authResponse.token, {
+    const { token } = authResponse;
+    res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
-    });
-
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: 604800000, // 7 dias
+      domain: isProduction ? '.onrender.com' : undefined // Ajuste conforme seu domínio
+    }); 
     res.status(200).json({ user: authResponse.user, token: authResponse.token });
   } catch (error) {
     console.error("Erro no login:", error);
