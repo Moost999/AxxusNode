@@ -69,8 +69,6 @@ export class AuthService {
           geminiApiKey: true,
           createdAt: true,
           updatedAt: true,
-          assistants: true, // Include related assistants
-          notifications: true // Include related notifications
         },
       });
 
