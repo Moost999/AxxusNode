@@ -42,16 +42,25 @@ const corsOptions: cors.CorsOptions = {
 
 router.use(cors(corsOptions));
 // Login de usuário
-router.post('/login', async (req, res) => {
+// Exemplo de rota de login no backend
+router.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
     const authResponse = await authService.loginUser(email, password);
-    
-    res.cookie('token', authResponse.token, authResponse.cookieOptions);
-    res.json({ user: authResponse.user });
-  
+
+    console.log("Resposta do login:", authResponse); // Depuração
+
+    res.cookie("token", authResponse.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+    });
+
+    res.status(200).json({ user: authResponse.user });
   } catch (error) {
-    res.status(401).json({ error: error instanceof Error ? error.message : 'Login failed' });
+    console.error("Erro no login:", error);
+    res.status(401).json({ error: "Credenciais inválidas" });
   }
 });
 
