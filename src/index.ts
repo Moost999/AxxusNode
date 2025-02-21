@@ -27,20 +27,33 @@ const allowedOrigins = [
   'http://192.168.0.2:3000'
 ];
 
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
+// Configuração CORS mais permissiva para desenvolvimento
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Em desenvolvimento, permite todas as origens
+    if (process.env.NODE_ENV !== "production") {
+      callback(null, true)
+      return
+    }
+
+    // Em produção, verifica as origens permitidas
+    const allowedOrigins = [
+      "https://axxus-front.vercel.app",
+      "https://axxus-front-git-main-axxus.vercel.app",
+      "http://localhost:3000",
+    ]
+
     if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
+      callback(null, true)
     } else {
-      console.log(`CORS blocked: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error("Not allowed by CORS"))
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
-  exposedHeaders: ['Set-Cookie', 'Authorization', 'Content-Disposition'],
-};
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+  exposedHeaders: ["Set-Cookie"],
+}
 
 // 2️⃣ Aplica CORS antes de outros middlewares
 app.use(cors(corsOptions));
@@ -57,13 +70,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Content-Type', 'application/json');
   
   // Headers de segurança adicionais em produção
-  if (isProduction) {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
+  if (process.env.NODE_ENV !== "production") {
+    app.use((req, res, next) => {
+      console.log(`${req.method} ${req.url}`)
+      console.log("Headers:", req.headers)
+      console.log("Body:", req.body)
+      next()
+    })
   }
-  
-  next();
 });
 
 // 5️⃣ Rotas Públicas (sem autenticação)
