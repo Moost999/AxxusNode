@@ -60,7 +60,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
  // Habilita preflight para todas as rotas
-app.options('/api/auth/login', cors(corsOptions)); // Habilita preflight para a rota de login
+ // Habilita preflight para a rota de login
 // 3️⃣ Middlewares Essenciais
 app.use(cookieParser()); // Para parsear cookies - IMPORTANTE: coloque antes do express.json()
 app.use(express.json({ limit: '10mb' })); // Para parsear JSON no corpo das requisições
