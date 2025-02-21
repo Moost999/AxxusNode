@@ -20,32 +20,13 @@ const cookieOptions = {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    
-    if (!email || !password) {
-       res.status(400).json({ 
-        success: false, 
-        message: 'Email e senha são obrigatórios' 
-      });
-      return
-    }
-    
     const authResponse = await authService.loginUser(email, password);
     
-    // Configurar o cookie de autenticação
-    res.cookie('token', authResponse.token, cookieOptions);
-    
-    // Enviar resposta com dados do usuário e token
-    res.status(200).json({
-      success: true,
-      user: authResponse.user,
-      token: authResponse.token
-    });
+    res.cookie('token', authResponse.token, authResponse.cookieOptions);
+    res.json({ user: authResponse.user });
+  
   } catch (error) {
-    console.error('Erro no login:', error);
-    res.status(401).json({ 
-      success: false, 
-      message: error instanceof Error ? error.message : 'Credenciais inválidas' 
-    });
+    res.status(401).json({ error: error instanceof Error ? error.message : 'Login failed' });
   }
 });
 

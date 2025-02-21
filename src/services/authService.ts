@@ -13,6 +13,13 @@ if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'fallback_secret_for
 type AuthResponse = {
   user: Omit<User, 'password'>;
   token: string;
+  cookieOptions: {
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: 'none' | 'lax';
+    maxAge: number;
+    path: string;
+  };
 };
 
 export class AuthService {
@@ -77,6 +84,13 @@ export class AuthService {
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     const { password, ...userData } = user;
     console.log('Token gerado para usuário:', user.id);
-    return { user: userData, token };
+    return { user: userData, token, 
+          cookieOptions: {
+           httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+          path: "/"
+  }};
   }
-}
+}   
