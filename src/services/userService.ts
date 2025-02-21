@@ -1,7 +1,7 @@
 // src/services/userService.ts
-import prisma from "../lib/prisma"
+import { Prisma, PrismaClient } from '@prisma/client'
 import bcrypt from 'bcrypt'
-
+const prisma = new PrismaClient();
 interface CreateUserData {
   name: string
   email: string

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import prisma from "../lib/prisma";
-
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
 // Defina uma interface para a requisição autenticada
 interface AuthenticatedRequest extends Request {
   userId?: string;
