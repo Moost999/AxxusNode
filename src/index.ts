@@ -58,7 +58,7 @@ const corsOptions = {
 
 // 2️⃣ Aplica CORS antes de outros middlewares
 app.use(cors(corsOptions));
-
+app.options('*', cors(corsOptions));
  // Habilita preflight para todas as rotas
 app.options('/api/auth/login', cors(corsOptions)); // Habilita preflight para a rota de login
 // 3️⃣ Middlewares Essenciais
