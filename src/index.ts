@@ -41,6 +41,7 @@ const corsOptions = {
       "https://axxus-front.vercel.app",
       "https://axxus-front-git-main-axxus.vercel.app",
       "http://localhost:3000",
+      "http://192.168.0.2:3000"
     ]
 
     if (!origin || allowedOrigins.includes(origin)) {
