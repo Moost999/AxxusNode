@@ -31,16 +31,27 @@ router.post('/login', async (req, res) => {
 });
 
 // Validação de token
+// No arquivo authRoutes.ts, modifique o endpoint /validate:
+
+// Validação de token
 router.get('/validate', async (req, res) => {
   try {
+    // Garantir que os headers CORS estejam presentes em cada resposta
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
     // Obter token do cookie ou do header Authorization
     const tokenFromCookie = req.cookies.token;
     const tokenFromHeader = req.headers.authorization?.split(" ")[1];
     const token = tokenFromCookie || tokenFromHeader;
     
+    console.log('Token recebido:', token ? 'presente' : 'ausente');
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Cookies:', req.cookies);
+    
     if (!token) {
-       res.status(401).json({ success: false, message: 'Token não fornecido' });
-       return
+      res.status(401).json({ success: false, message: 'Token não fornecido' });
+      return
     }
     
     // Validar o token
