@@ -16,6 +16,31 @@ const cookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias em milissegundos
 };
 
+import cors from 'cors';
+
+const allowedOrigins = [
+  'https://axxus-front.vercel.app',
+  'https://axxus-front-git-main-axxus.vercel.app',
+  'http://localhost:3000',
+  'http://192.168.0.2:3000', // Adicione o IP do seu frontend
+];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log(`CORS bloqueado para origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true, // Permite cookies e credenciais
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Métodos permitidos
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'], // Headers permitidos
+  optionsSuccessStatus: 200, // Status para requisições OPTIONS
+};
+
+router.use(cors(corsOptions));
 // Login de usuário
 router.post('/login', async (req, res) => {
   try {

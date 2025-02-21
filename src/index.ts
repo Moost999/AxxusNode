@@ -54,6 +54,7 @@ const corsOptions = {
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Accept"],
   exposedHeaders: ["Set-Cookie"],
+  optionsSuccessStatus: 200,
 }
 
 // 2️⃣ Aplica CORS antes de outros middlewares
