@@ -57,7 +57,7 @@ router.post("/api/auth/login", async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
     });
 
-    res.status(200).json({ user: authResponse.user });
+    res.status(200).json({ user: authResponse.user, token: authResponse.token });
   } catch (error) {
     console.error("Erro no login:", error);
     res.status(401).json({ error: "Credenciais inválidas" });
