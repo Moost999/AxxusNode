@@ -1,75 +1,99 @@
-  import { Router } from 'express';
-  import { AuthService } from '../services/authService';
-  import cookieParser from 'cookie-parser';
+import express from 'express';
+import { AuthService } from '../services/authService';
+import { PrismaClient } from '@prisma/client';
 
-  const router = Router();
-  const authService = new AuthService();
+const router = express.Router();
+const authService = new AuthService();
+const prisma = new PrismaClient();
+const isProduction = process.env.NODE_ENV === 'production';
 
-  router.use(cookieParser());
+// Configurações de cookie para maior segurança
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProduction, // true em produção (requer HTTPS)
+  sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' permite cookies em cross-site com HTTPS
+  path: '/',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias em milissegundos
+};
 
-  router.post('/register', async (req, res) => {
-    try {
-      const { user, token } = await authService.registerUser(
-        req.body.name,
-        req.body.email,
-        req.body.password
-      );
-
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 604800000 // 7 dias
+// Login de usuário
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+       res.status(400).json({ 
+        success: false, 
+        message: 'Email e senha são obrigatórios' 
       });
-
-      res.status(201).json({ success: true, user });
-    } catch (error) {
-      res.status(400).json({ 
-        success: false,
-        message: error instanceof Error ? error.message : 'Registration failed'
-      });
+      return
     }
-  });
+    
+    const authResponse = await authService.loginUser(email, password);
+    
+    // Configurar o cookie de autenticação
+    res.cookie('token', authResponse.token, cookieOptions);
+    
+    // Enviar resposta com dados do usuário e token
+    res.status(200).json({
+      success: true,
+      user: authResponse.user,
+      token: authResponse.token
+    });
+  } catch (error) {
+    console.error('Erro no login:', error);
+    res.status(401).json({ 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Credenciais inválidas' 
+    });
+  }
+});
 
-  router.post('/login', async (req, res) => {
-    try {
-      const { user, token } = await authService.loginUser(
-        req.body.email,
-        req.body.password
-      );
-
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 604800000
-      });
-
-      res.json({ success: true, user });
-    } catch (error) {
-      res.status(401).json({
-        success: false,
-        message: error instanceof Error ? error.message : 'Login failed'
-      });
+// Validação de token
+router.get('/validate', async (req, res) => {
+  try {
+    // Obter token do cookie ou do header Authorization
+    const tokenFromCookie = req.cookies.token;
+    const tokenFromHeader = req.headers.authorization?.split(" ")[1];
+    const token = tokenFromCookie || tokenFromHeader;
+    
+    if (!token) {
+       res.status(401).json({ success: false, message: 'Token não fornecido' });
+       return
     }
-  });
+    
+    // Validar o token
+    const user = await authService.validateToken(token);
+    
+    // Omitir a senha do resultado
+    const { password, ...userData } = user;
+    
+    // Responder com os dados do usuário
+    res.status(200).json({
+      success: true,
+      user: userData
+    });
+  } catch (error) {
+    console.error('Erro na validação do token:', error);
+    res.status(401).json({ 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Token inválido' 
+    });
+  }
+});
 
-  router.get('/validate', async (req, res) => {
-    try {
-      const token = req.cookies.token; // Lê do cookie
-      console.log(token);
-      if (!token) throw new Error('No token');
-      
-      const user = await authService.validateToken(token);
-      res.json({ success: true, user });
-    } catch (error) {
-      res.clearCookie('token');
-      res.status(401).json({ success: false }); // Resposta explícita
-    }
+// Logout
+router.post('/logout', (req, res) => {
+  // Limpar o cookie de autenticação
+  res.clearCookie('token', {
+    ...cookieOptions,
+    maxAge: 0,
   });
-  router.post('/logout', (req, res) => {
-    res.clearCookie('token');
-    res.json({ success: true });
+  
+  res.status(200).json({ 
+    success: true, 
+    message: 'Logout realizado com sucesso' 
   });
+});
 
-  export default router;
+export default router;

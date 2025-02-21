@@ -2,7 +2,11 @@ import type { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/authService';
 import { PrismaClient } from '@prisma/client';
 
-const allowedOrigins = ['https://axxus-front.vercel.app', 'http://192.168.0.2:3000'];
+const allowedOrigins = [
+  'https://axxus-front.vercel.app', 
+  'http://localhost:3000',
+  'http://192.168.0.2:3000'
+];
 const authService = new AuthService();
 const prisma = new PrismaClient();
 
@@ -10,6 +14,7 @@ declare global {
   namespace Express {
     interface Request {
       userId?: string;
+      user?: any; // Adicionado o usuário completo no request
     }
   }
 }
@@ -17,32 +22,43 @@ declare global {
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Verificar tanto o cookie quanto o header Authorization
-    const tokenFromCookie = req.cookies.token
-    const tokenFromHeader = req.headers.authorization?.split(" ")[1]
-    const token = tokenFromCookie || tokenFromHeader
+    const tokenFromCookie = req.cookies.token;
+    const tokenFromHeader = req.headers.authorization?.split(" ")[1];
+    const token = tokenFromCookie || tokenFromHeader;
 
     if (!token) {
-      throw new Error("Token não encontrado")
+      console.log('Autenticação falhou: Token não encontrado');
+      console.log('Headers:', JSON.stringify(req.headers, null, 2));
+      console.log('Cookies:', req.cookies);
+      throw new Error("Token não encontrado");
     }
 
-    const user = await authService.validateToken(token)
-    req.userId = user.id
-
-    next()
+    // Validar token e obter dados do usuário
+    const user = await authService.validateToken(token);
+    
+    // Armazenar tanto o ID quanto os dados completos do usuário
+    req.userId = user.id;
+    req.user = user;
+    
+    console.log(`Usuário autenticado: ${user.id} (${user.email})`);
+    next();
   } catch (error) {
+    console.error('Erro na autenticação:', error instanceof Error ? error.message : 'Erro desconhecido');
+    
+    // Limpar o cookie de autenticação
     res.clearCookie("token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production", // true em produção, false em desenvolvimento
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Ajuste importante para CORS
       path: "/",
-    })
+    });
 
     res.status(401).json({
       error: "Autenticação falhou",
       message: error instanceof Error ? error.message : "Erro desconhecido",
-    })
+    });
   }
-}
+};
 
 export const checkMessageQuota = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -62,6 +78,7 @@ export const checkMessageQuota = async (req: Request, res: Response, next: NextF
     }
     next();
   } catch (error) {
+    console.error('Erro ao verificar quota de mensagens:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

@@ -3,7 +3,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_development';
+
+// Verificação de segurança para ambiente de produção
+if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'fallback_secret_for_development') {
+  console.error('AVISO: JWT_SECRET não está configurado corretamente no ambiente de produção!');
+}
 
 type AuthResponse = {
   user: Omit<User, 'password'>;
@@ -63,6 +68,7 @@ export class AuthService {
       if (!user) throw new Error('User not found');
       return user;
     } catch (error) {
+      console.error('Token validation error:', error);
       throw new Error('Invalid token');
     }
   }
@@ -70,6 +76,7 @@ export class AuthService {
   private generateAuthResponse(user: User): AuthResponse {
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     const { password, ...userData } = user;
+    console.log('Token gerado para usuário:', user.id);
     return { user: userData, token };
   }
 }

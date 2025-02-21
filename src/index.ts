@@ -2,7 +2,6 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
-
 import assistantRoutes from './routes/assistantRoutes';
 import userRoutes from './routes/userRoutes';
 import whatsappRoutes from './routes/whatsappRoutes';
@@ -18,6 +17,7 @@ import { authenticate } from './middleware/auth';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3001;
+const isProduction = process.env.NODE_ENV === 'production';
 
 // 1️⃣ Configuração CORS Dinâmica
 const allowedOrigins = [
@@ -29,17 +29,19 @@ const allowedOrigins = [
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
+    // Aceita requests sem origin (como apps mobile ou Postman)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.log(`CORS bloqueado para origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true,
+  credentials: true, // Crucial para enviar/receber cookies
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', "Accept"],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
   optionsSuccessStatus: 200,
-  exposedHeaders: ["Set-Cookie"],
+  exposedHeaders: ['Set-Cookie', 'Authorization'],
 };
 
 // 2️⃣ Aplica CORS antes de outros middlewares
@@ -47,18 +49,32 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // Habilita preflight para todas as rotas
 
 // 3️⃣ Middlewares Essenciais
-app.use(express.json()); // Para parsear JSON no corpo das requisições
-app.use(cookieParser()); // Para parsear cookies
-app.use(express.urlencoded({ extended: true })); // Para parsear URL-encoded bodies
+app.use(cookieParser()); // Para parsear cookies - IMPORTANTE: coloque antes do express.json()
+app.use(express.json({ limit: '10mb' })); // Para parsear JSON no corpo das requisições
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Para parsear URL-encoded bodies
 
-// 4️⃣ Middleware para Forçar JSON Responses
+// 4️⃣ Middleware para adicionar headers de segurança
 app.use((req: Request, res: Response, next: NextFunction) => {
+  // Configurar headers de resposta padrão
   res.setHeader('Content-Type', 'application/json');
+  
+  // Headers de segurança adicionais em produção
+  if (isProduction) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+  }
+  
   next();
 });
 
 // 5️⃣ Rotas Públicas (sem autenticação)
 app.use('/api/auth', authRoutes);
+
+// Endpoint para verificar se o servidor está rodando
+app.get('/health', (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok', environment: process.env.NODE_ENV });
+});
 
 // 6️⃣ Middleware de Autenticação (protege as rotas abaixo)
 app.use('/api', authenticate);
@@ -80,14 +96,16 @@ app.use((req: Request, res: Response) => {
 
 // 9️⃣ Tratamento de Erros Global
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('Erro global:', err);
   console.error(err.stack); // Log do erro no console
+  
   res.status(500).json({
     error: 'Internal Server Error',
-    message: err.message || 'Something went wrong!'
+    message: isProduction ? 'Something went wrong!' : (err.message || 'Unknown error')
   });
 });
 
 // Inicia o servidor
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT} (${process.env.NODE_ENV || 'development'} mode)`);
 });
