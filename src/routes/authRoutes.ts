@@ -30,7 +30,7 @@ router.post("/api/auth/login", async (req, res) => {
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
       maxAge: 604800000, // 7 dias
-      domain: isProduction ? '.onrender.com' : undefined // Ajuste conforme seu domínio
+      domain: isProduction ? '.onrender.com' : '.onrender.com' // Ajuste conforme seu domínio
     }); 
     res.status(200).json({ user: authResponse.user, token: authResponse.token });
   } catch (error) {
