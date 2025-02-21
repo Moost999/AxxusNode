@@ -40,7 +40,9 @@ const corsOptions: cors.CorsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', "Accept"],
   optionsSuccessStatus: 200
 };
-
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', time: new Date().toISOString() });
+});
 // 2️⃣ Aplica CORS antes de outros middlewares
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // Habilita preflight para todas as rotas
