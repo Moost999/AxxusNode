@@ -18,25 +18,48 @@ declare global {
 // Atualize o middleware de autenticação
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = req.cookies.token;
-    if (!token) throw new Error('Token não encontrado');
+    // Configurar CORS para a origem específica
+    const origin = req.get("origin")
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin)
+    }
+    res.setHeader("Access-Control-Allow-Credentials", "true")
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept")
 
-    const user = await authService.validateToken(token);
-    req.userId = user.id;
+    // Se for uma requisição OPTIONS, retorna OK
+    if (req.method === "OPTIONS") {
+      return res.status(200).end()
+    }
 
-    // Adicione headers CORS mesmo em erros
-    res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
-    res.header('Access-Control-Allow-Credentials', 'true');
-    
-    next();
+    const token = req.cookies.token
+    if (!token) {
+      throw new Error("Token não encontrado")
+    }
+
+    const user = await authService.validateToken(token)
+    req.userId = user.id
+
+    next()
   } catch (error) {
-    res
-      .status(401)
-      .header('Access-Control-Allow-Origin', allowedOrigins[0])
-      .header('Access-Control-Allow-Credentials', 'true')
-      .json({ error: "Token inválido" });
+    // Configurar CORS mesmo em caso de erro
+    const origin = req.get("origin")
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin)
+    }
+    res.setHeader("Access-Control-Allow-Credentials", "true")
+
+    // Limpar o cookie em caso de erro de autenticação
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    })
+
+    res.status(401).json({ error: "Autenticação falhou" })
   }
-};
+}
 
 export const checkMessageQuota = async (req: Request, res: Response, next: NextFunction) => {
   try {
