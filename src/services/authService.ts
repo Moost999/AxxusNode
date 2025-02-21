@@ -14,7 +14,7 @@ export class AuthService {
   async registerUser(name: string, email: string, password: string): Promise<AuthResponse> {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) throw new Error('Email already registered');
-    
+
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
       data: {
@@ -22,8 +22,8 @@ export class AuthService {
         email,
         password: hashedPassword,
         tokens: 100,
-        availableMessages: 100
-      }
+        availableMessages: 100,
+      },
     });
 
     return this.generateAuthResponse(user);
@@ -56,8 +56,8 @@ export class AuthService {
           groqApiKey: true,
           geminiApiKey: true,
           createdAt: true,
-          updatedAt: true
-        }
+          updatedAt: true,
+        },
       });
 
       if (!user) throw new Error('User not found');
