@@ -16,26 +16,33 @@ declare global {
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = req.cookies.token;
+    // Verificar tanto o cookie quanto o header Authorization
+    const tokenFromCookie = req.cookies.token
+    const tokenFromHeader = req.headers.authorization?.split(" ")[1]
+    const token = tokenFromCookie || tokenFromHeader
+
     if (!token) {
-      throw new Error('Token não encontrado');
+      throw new Error("Token não encontrado")
     }
 
-    const user = await authService.validateToken(token);
-    req.userId = user.id;
+    const user = await authService.validateToken(token)
+    req.userId = user.id
 
-    next();
+    next()
   } catch (error) {
-    res.clearCookie('token', {
+    res.clearCookie("token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-    });
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    })
 
-    res.status(401).json({ error: 'Autenticação falhou' });
+    res.status(401).json({
+      error: "Autenticação falhou",
+      message: error instanceof Error ? error.message : "Erro desconhecido",
+    })
   }
-};
+}
 
 export const checkMessageQuota = async (req: Request, res: Response, next: NextFunction) => {
   try {
