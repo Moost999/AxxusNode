@@ -73,7 +73,7 @@ router.get('/validate', async (req, res) => {
 
     res.status(200).json({
       success: true,
-      user: userData,
+      user,
     });
 
   } catch (error) {
