@@ -48,14 +48,9 @@ router.post("/login", async (req, res) => {
 // Rota de validação corrigida
 router.get('/validate', async (req, res) => {
   try {
-    // Configurar headers CORS dinamicamente
-    res.header({
-      'Access-Control-Allow-Origin': req.headers.origin || allowedOrigins[0],
-      'Access-Control-Allow-Credentials': 'true'
-    });
 
     // Debug: Log completo dos cookies recebidos
-    console.log('Cookies recebidos na validação:', req.header.authorization?.split(" ")[1];);
+    console.log('Cookies recebidos na validação:', req.headers.authorization?.split(" ")[1]);
 
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
     
