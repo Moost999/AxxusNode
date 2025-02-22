@@ -9,11 +9,6 @@ interface AuthenticatedRequest extends Request {
 export const dashboardController = {
   getStats: async (req: Request, res: Response, next: NextFunction) => {
     try {
-
-      res.header({
-        'Access-Control-Allow-Origin': 'https://axxus.netlify.app',
-        'Access-Control-Allow-Credentials': 'true'
-      });
       const userId = (req as AuthenticatedRequest).userId;
       console.log('userId: ', userId); // LOG DE DEBUG USERID DASHBOARDCONTROLLER.TS
       
@@ -54,10 +49,6 @@ export const dashboardController = {
         availableMessages: user.availableMessages
       });
     } catch (error) {
-      res.header({
-        'Access-Control-Allow-Origin': 'https://axxus.netlify.app',
-        'Access-Control-Allow-Credentials': 'true'
-      });
       console.error("Erro ao obter estatísticas do dashboard:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
