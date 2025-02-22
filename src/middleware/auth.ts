@@ -21,43 +21,41 @@ declare global {
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Debug: Listar todos os cookies recebidos
-    console.log('Cookies recebidos:', req.cookies);
-    
-    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
-    
+    // Verificar tanto o cookie quanto o header Authorization
+    const tokenFromCookie = req.cookies.token;
+    const tokenFromHeader = req.headers.authorization?.split(" ")[1];
+    const token = tokenFromCookie || tokenFromHeader;
+
     if (!token) {
-      console.log('Token não encontrado nos headers ou cookies');
+      console.log('Autenticação falhou: Token não encontrado');
+      console.log('Headers:', JSON.stringify(req.headers, null, 2));
+      console.log('Cookies:', req.cookies);
       throw new Error("Token não encontrado");
     }
 
-    // Verificar validade do token
+    // Validar token e obter dados do usuário
     const user = await authService.validateToken(token);
     
-    // Adicionar dados extras ao request
-    req.user = {
-      ...user,
-      ip: req.ip,
-      userAgent: req.headers['user-agent']
-    };
-
+    // Armazenar tanto o ID quanto os dados completos do usuário
+    req.userId = user.id;
+    req.user = user;
+    
+    console.log(`Usuário autenticado: ${user.id} (${user.email})`);
     next();
   } catch (error) {
-    console.error('Erro detalhado na autenticação:', error);
+    console.error('Erro na autenticação:', error instanceof Error ? error.message : 'Erro desconhecido');
     
-    // Limpeza reforçada do cookie
+    // Limpar o cookie de autenticação
     res.clearCookie("token", {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-      domain: '.axxus.netlify.app'
+      secure: process.env.NODE_ENV === "production", // true em produção, false em desenvolvimento
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Ajuste importante para CORS
+      path: "/",
     });
 
     res.status(401).json({
       error: "Autenticação falhou",
-      debug: error instanceof Error ? error.message : "Erro desconhecido",
-      stack: process.env.NODE_ENV === 'development',
+      message: error instanceof Error ? error.message : "Erro desconhecido",
     });
   }
 };
