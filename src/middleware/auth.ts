@@ -22,6 +22,10 @@ declare global {
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Verificar tanto o cookie quanto o header Authorization
+    res.header({
+      'Access-Control-Allow-Origin': 'https://axxus.netlify.app',
+      'Access-Control-Allow-Credentials': 'true'
+    });
     const tokenFromCookie = req.cookies.token;
     const tokenFromHeader = req.headers.authorization?.split(" ")[1];
     const token = tokenFromHeader || tokenFromCookie;
@@ -44,7 +48,10 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     next();
   } catch (error) {
     console.error('Erro na autenticação:', error instanceof Error ? error.message : 'Erro desconhecido');
-    
+    res.header({
+      'Access-Control-Allow-Origin': 'https://axxus.netlify.app',
+      'Access-Control-Allow-Credentials': 'true'
+    });
     // Limpar o cookie de autenticação
     res.clearCookie("token", {
       httpOnly: true,
