@@ -29,6 +29,7 @@ export class MessageProcessingService {
     const assistant = await this.assistantService.getAssistantById(assistantId);
     const conversationKey = this.getConversationKey(fromNumber, assistantId);
 
+
     let conversation = this.conversations.get(conversationKey) || {
       history: [{
         role: 'system',
@@ -46,7 +47,6 @@ export class MessageProcessingService {
 
     conversation.history.push({ role: 'assistant', content: aiResponse });
     this.conversations.set(conversationKey, conversation);
-
     return aiResponse;
   }
 }

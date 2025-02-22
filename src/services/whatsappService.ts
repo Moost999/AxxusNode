@@ -1,83 +1,139 @@
 import { Client, LocalAuth, Message } from 'whatsapp-web.js';
-import qrcode from 'qrcode-terminal';
-import { Assistant } from '../models/assistant';
-
-import path from 'path';
 import { PrismaClient } from '@prisma/client';
-
-
-function clearWhatsAppCache() {
-  const cachePath = path.join(process.cwd(), '.wwebjs_auth');
-  try {
-    require('fs').rmSync(cachePath, { recursive: true, force: true });
-    console.log('WhatsApp cache cleared');
-  } catch (error) {
-    console.error('Error clearing WhatsApp cache:', error);
-  }
-}
-
-clearWhatsAppCache();
-
-
+import path from 'path';
+import fs from 'fs';
 
 const prisma = new PrismaClient();
 
 export class WhatsAppClient {
   private clients: Map<string, Client> = new Map();
   private qrCodes: Map<string, string> = new Map();
+  private clientInitializationPromises: Map<string, Promise<void>> = new Map();
   private messageHandler: (from: string, body: string, assistantId: string) => Promise<void>;
 
   constructor(messageHandler: (from: string, body: string, assistantId: string) => Promise<void>) {
     this.messageHandler = messageHandler;
   }
 
-  async initializeClient(assistantId: string): Promise<string> {
-    const assistant = await prisma.assistant.findUnique({
-      where: { id: assistantId },
-      include: { user: true }
-    });
+  private async clearSessionData(assistantId: string) {
+    const sessionDir = path.join(process.cwd(), '.wwebjs_auth', `session-${assistantId}`);
+    try {
+      if (fs.existsSync(sessionDir)) {
+        await fs.promises.rm(sessionDir, { recursive: true, force: true });
+        console.log(`Session data cleared for assistant ${assistantId}`);
+      }
+    } catch (error) {
+      console.error(`Error clearing session data for assistant ${assistantId}:`, error);
+    }
+  }
 
-    if (!assistant) {
-      throw new Error('Assistant not found');
+  private async destroyClient(assistantId: string) {
+    const client = this.clients.get(assistantId);
+    if (client) {
+      try {
+        await client.destroy();
+        this.clients.delete(assistantId);
+        this.qrCodes.delete(assistantId);
+        await this.clearSessionData(assistantId);
+        console.log(`Client ${assistantId} destroyed successfully`);
+      } catch (error) {
+        console.error(`Error destroying client ${assistantId}:`, error);
+      }
+    }
+  }
+
+  async initializeClient(assistantId: string): Promise<string> {
+    // Se já existe uma inicialização em andamento, retorna o QR code existente
+    if (this.clientInitializationPromises.has(assistantId)) {
+      const existingQr = this.qrCodes.get(assistantId);
+      if (existingQr) return existingQr;
     }
 
-    return new Promise((resolve, reject) => {
-      const client = new Client({
-        authStrategy: new LocalAuth({ clientId: assistantId }),
-        puppeteer: { 
-          headless: true,
-          args: ['--no-sandbox', '--disable-setuid-sandbox']
+    // Se já existe um cliente, destrua-o primeiro
+    await this.destroyClient(assistantId);
+
+    const initializationPromise = new Promise<string>(async (resolve, reject) => {
+      try {
+        const assistant = await prisma.assistant.findUnique({
+          where: { id: assistantId },
+          include: { user: true }
+        });
+
+        if (!assistant) {
+          throw new Error('Assistant not found');
         }
-      });
 
-      client.on('qr', (qr) => {
-        this.qrCodes.set(assistantId, qr);
-        resolve(qr);
-      });
-
-      client.on('authenticated', () => {
-        this.qrCodes.delete(assistantId);
-        console.log(`Client ${assistantId} authenticated!`);
-      });
-
-      client.on('ready', () => {
-        console.log(`Client ${assistantId} ready!`);
-        this.clients.set(assistantId, client);
-      });
-
-      // Adicionar handler para mensagens recebidas
-      client.on('message', async (message: Message) => {
-        try {
-          if (message.from && message.body) {
-            await this.messageHandler(message.from, message.body, assistantId);
+        const client = new Client({
+          authStrategy: new LocalAuth({ 
+            clientId: `session-${assistantId}`,
+            dataPath: path.join(process.cwd(), '.wwebjs_auth')
+          }),
+          puppeteer: { 
+            headless: true,
+            args: [
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-accelerated-2d-canvas',
+              '--disable-gpu'
+            ]
           }
-        } catch (error) {
-          console.error('Error processing message:', error);
-        }
-      });
+        });
 
-      client.initialize().catch(reject);
+        let qrCodeResolved = false;
+
+        client.on('qr', (qr) => {
+          this.qrCodes.set(assistantId, qr);
+          if (!qrCodeResolved) {
+            qrCodeResolved = true;
+            resolve(qr);
+          }
+        });
+
+        client.on('authenticated', () => {
+          console.log(`Client ${assistantId} authenticated`);
+        });
+
+        client.on('auth_failure', async (msg) => {
+          console.error(`Auth failure for client ${assistantId}:`, msg);
+          await this.destroyClient(assistantId);
+          reject(new Error('Authentication failed'));
+        });
+
+        client.on('disconnected', async (reason) => {
+          console.log(`Client ${assistantId} disconnected:`, reason);
+          await this.destroyClient(assistantId);
+        });
+
+        client.on('ready', () => {
+          console.log(`Client ${assistantId} is ready`);
+          this.clients.set(assistantId, client);
+          if (!qrCodeResolved) {
+            qrCodeResolved = true;
+            resolve(this.qrCodes.get(assistantId) || '');
+          }
+        });
+
+        client.on('message', async (message: Message) => {
+          if (message.from && message.body) {
+            try {
+              await this.messageHandler(message.from, message.body, assistantId);
+            } catch (error) {
+              console.error('Error processing message:', error);
+            }
+          }
+        });
+
+        await client.initialize();
+      } catch (error) {
+        console.error(`Error initializing client ${assistantId}:`, error);
+        await this.destroyClient(assistantId);
+        reject(error);
+      }
     });
+
+    this.clientInitializationPromises.set(assistantId, initializationPromise.then());
+    return initializationPromise;
   }
 
   async sendMessage(assistantId: string, to: string, message: string): Promise<void> {
@@ -85,10 +141,11 @@ export class WhatsAppClient {
     if (!client) {
       throw new Error('WhatsApp client not initialized');
     }
-    await client.sendMessage(to, message);
-  }
-
-  getClient(assistantId: string): Client | undefined {
-    return this.clients.get(assistantId);
+    try {
+      await client.sendMessage(to, message);
+    } catch (error) {
+      console.error(`Error sending message for client ${assistantId}:`, error);
+      throw error;
+    }
   }
 }
