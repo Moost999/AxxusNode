@@ -93,7 +93,7 @@ export class AuthService {
       token,
       cookieOptions: {
         httpOnly: true,
-        secure: isProduction, // 🔴 Apenas HTTPS em produção
+        secure: true, // 🔴 Apenas HTTPS em produção
         sameSite: isProduction ? 'none' : 'lax', // 🔴 sameSite none requer HTTPS
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
         path: '/',
