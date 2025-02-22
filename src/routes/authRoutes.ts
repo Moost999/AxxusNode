@@ -6,6 +6,7 @@ const router = express.Router();
 const authService = new AuthService();
 const prisma = new PrismaClient();
 const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = ['http://localhost:3000', 'https://axxus.netlify.app']; // Add your allowed origins here
 
 // Rota de login corrigida
 router.post("/login", async (req, res) => {
@@ -47,15 +48,19 @@ router.post("/login", async (req, res) => {
 // Rota de validação corrigida
 router.get('/validate', async (req, res) => {
   try {
-    // Headers CORS essenciais
+    // Configurar headers CORS dinamicamente
     res.header({
-      'Access-Control-Allow-Origin': req.headers.origin,
+      'Access-Control-Allow-Origin': req.headers.origin || allowedOrigins[0],
       'Access-Control-Allow-Credentials': 'true'
     });
+
+    // Debug: Log completo dos cookies recebidos
+    console.log('Cookies recebidos na validação:', req.cookies);
 
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
     
     if (!token) {
+      console.log('Token ausente na validação');
        res.status(401).json({ 
         success: false, 
         message: 'Token não fornecido' 
@@ -63,7 +68,12 @@ router.get('/validate', async (req, res) => {
       return
     }
 
+    // Debug: Verificar conteúdo do token
+    console.log('Token recebido:', token.substring(0, 10) + '...');
+
     const user = await authService.validateToken(token);
+    
+    // Garantir que a senha não seja enviada
     const { password, ...userData } = user;
 
     res.status(200).json({
@@ -72,10 +82,11 @@ router.get('/validate', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro na validação:', error);
+    console.error('Erro detalhado na validação:', error);
     res.status(401).json({
       success: false,
-      message: 'Sessão expirada ou inválida'
+      message: 'Sessão expirada ou inválida',
+      debugInfo: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
 });
