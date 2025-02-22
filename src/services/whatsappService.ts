@@ -1,3 +1,4 @@
+// whatsappService.ts
 import { Client, LocalAuth, Message } from 'whatsapp-web.js';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
@@ -13,56 +14,73 @@ export class WhatsAppClient {
 
   constructor(messageHandler: (from: string, body: string, assistantId: string) => Promise<void>) {
     this.messageHandler = messageHandler;
+    console.log('[WhatsAppClient] Service initialized');
   }
 
   private async clearSessionData(assistantId: string) {
     const sessionDir = path.join(process.cwd(), '.wwebjs_auth', `session-${assistantId}`);
+    console.log(`[WhatsAppClient] Attempting to clear session data for ${assistantId} at ${sessionDir}`);
+    
     try {
       if (fs.existsSync(sessionDir)) {
         await fs.promises.rm(sessionDir, { recursive: true, force: true });
-        console.log(`Session data cleared for assistant ${assistantId}`);
+        console.log(`[WhatsAppClient] Session data cleared successfully for assistant ${assistantId}`);
+      } else {
+        console.log(`[WhatsAppClient] No existing session data found for assistant ${assistantId}`);
       }
     } catch (error) {
-      console.error(`Error clearing session data for assistant ${assistantId}:`, error);
+      console.error(`[WhatsAppClient] Error clearing session data for assistant ${assistantId}:`, error);
     }
   }
 
   private async destroyClient(assistantId: string) {
+    console.log(`[WhatsAppClient] Attempting to destroy client for ${assistantId}`);
     const client = this.clients.get(assistantId);
     if (client) {
       try {
+        console.log(`[WhatsAppClient] Destroying existing client for ${assistantId}`);
         await client.destroy();
         this.clients.delete(assistantId);
         this.qrCodes.delete(assistantId);
         await this.clearSessionData(assistantId);
-        console.log(`Client ${assistantId} destroyed successfully`);
+        console.log(`[WhatsAppClient] Client ${assistantId} destroyed successfully`);
       } catch (error) {
-        console.error(`Error destroying client ${assistantId}:`, error);
+        console.error(`[WhatsAppClient] Error destroying client ${assistantId}:`, error);
       }
+    } else {
+      console.log(`[WhatsAppClient] No existing client found for ${assistantId}`);
     }
   }
 
   async initializeClient(assistantId: string): Promise<string> {
+    console.log(`[WhatsAppClient] Starting initialization for assistant ${assistantId}`);
+
     // Se já existe uma inicialização em andamento, retorna o QR code existente
     if (this.clientInitializationPromises.has(assistantId)) {
+      console.log(`[WhatsAppClient] Initialization already in progress for ${assistantId}`);
       const existingQr = this.qrCodes.get(assistantId);
-      if (existingQr) return existingQr;
+      if (existingQr) {
+        console.log(`[WhatsAppClient] Returning existing QR code for ${assistantId}`);
+        return existingQr;
+      }
     }
 
-    // Se já existe um cliente, destrua-o primeiro
     await this.destroyClient(assistantId);
 
     const initializationPromise = new Promise<string>(async (resolve, reject) => {
       try {
+        console.log(`[WhatsAppClient] Fetching assistant data for ${assistantId}`);
         const assistant = await prisma.assistant.findUnique({
           where: { id: assistantId },
           include: { user: true }
         });
 
         if (!assistant) {
+          console.error(`[WhatsAppClient] Assistant ${assistantId} not found`);
           throw new Error('Assistant not found');
         }
 
+        console.log(`[WhatsAppClient] Creating new client for ${assistantId}`);
         const client = new Client({
           authStrategy: new LocalAuth({ 
             clientId: `session-${assistantId}`,
@@ -83,6 +101,7 @@ export class WhatsAppClient {
         let qrCodeResolved = false;
 
         client.on('qr', (qr) => {
+          console.log(`[WhatsAppClient] QR Code received for ${assistantId}`);
           this.qrCodes.set(assistantId, qr);
           if (!qrCodeResolved) {
             qrCodeResolved = true;
@@ -90,23 +109,27 @@ export class WhatsAppClient {
           }
         });
 
+        client.on('loading_screen', (percent, message) => {
+          console.log(`[WhatsAppClient] Loading: ${percent}% - ${message}`);
+        });
+
         client.on('authenticated', () => {
-          console.log(`Client ${assistantId} authenticated`);
+          console.log(`[WhatsAppClient] Client ${assistantId} authenticated successfully`);
         });
 
         client.on('auth_failure', async (msg) => {
-          console.error(`Auth failure for client ${assistantId}:`, msg);
+          console.error(`[WhatsAppClient] Authentication failed for ${assistantId}:`, msg);
           await this.destroyClient(assistantId);
           reject(new Error('Authentication failed'));
         });
 
         client.on('disconnected', async (reason) => {
-          console.log(`Client ${assistantId} disconnected:`, reason);
+          console.log(`[WhatsAppClient] Client ${assistantId} disconnected. Reason:`, reason);
           await this.destroyClient(assistantId);
         });
 
         client.on('ready', () => {
-          console.log(`Client ${assistantId} is ready`);
+          console.log(`[WhatsAppClient] Client ${assistantId} is ready and active`);
           this.clients.set(assistantId, client);
           if (!qrCodeResolved) {
             qrCodeResolved = true;
@@ -116,17 +139,21 @@ export class WhatsAppClient {
 
         client.on('message', async (message: Message) => {
           if (message.from && message.body) {
+            console.log(`[WhatsAppClient] Message received from ${message.from} for assistant ${assistantId}:`, message.body);
             try {
               await this.messageHandler(message.from, message.body, assistantId);
+              console.log(`[WhatsAppClient] Message processed successfully for ${assistantId}`);
             } catch (error) {
-              console.error('Error processing message:', error);
+              console.error(`[WhatsAppClient] Error processing message for ${assistantId}:`, error);
             }
           }
         });
 
+        console.log(`[WhatsAppClient] Initializing client for ${assistantId}`);
         await client.initialize();
+        console.log(`[WhatsAppClient] Client initialization completed for ${assistantId}`);
       } catch (error) {
-        console.error(`Error initializing client ${assistantId}:`, error);
+        console.error(`[WhatsAppClient] Error during initialization for ${assistantId}:`, error);
         await this.destroyClient(assistantId);
         reject(error);
       }
@@ -137,14 +164,17 @@ export class WhatsAppClient {
   }
 
   async sendMessage(assistantId: string, to: string, message: string): Promise<void> {
+    console.log(`[WhatsAppClient] Attempting to send message to ${to} from assistant ${assistantId}`);
     const client = this.clients.get(assistantId);
     if (!client) {
+      console.error(`[WhatsAppClient] Client not found for assistant ${assistantId}`);
       throw new Error('WhatsApp client not initialized');
     }
     try {
       await client.sendMessage(to, message);
+      console.log(`[WhatsAppClient] Message sent successfully to ${to} from assistant ${assistantId}`);
     } catch (error) {
-      console.error(`Error sending message for client ${assistantId}:`, error);
+      console.error(`[WhatsAppClient] Error sending message for client ${assistantId}:`, error);
       throw error;
     }
   }
