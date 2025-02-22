@@ -3,30 +3,13 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_development';
-const isProduction = process.env.NODE_ENV === 'production'; // Variável para verificar o ambiente
-
-// Verificação de segurança para ambiente de produção
-if (isProduction && JWT_SECRET === 'fallback_secret_for_development') {
-  console.error('AVISO: JWT_SECRET não está configurado corretamente no ambiente de produção!');
-}
-
-type AuthResponse = {
-  user: Omit<User, 'password'>;
-  token: string;
-  cookieOptions: {
-    httpOnly: boolean;
-    secure: boolean;
-    sameSite: 'none' | 'lax';
-    maxAge: number;
-    path: string;
-  };
-};
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
+const isProduction = process.env.NODE_ENV === 'production';
 
 export class AuthService {
-  async registerUser(name: string, email: string, password: string): Promise<AuthResponse> {
+  async registerUser(name: string, email: string, password: string) {
     const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) throw new Error('Email already registered');
+    if (existingUser) throw new Error('Email já registrado');
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
@@ -42,10 +25,10 @@ export class AuthService {
     return this.generateAuthResponse(user);
   }
 
-  async loginUser(email: string, password: string): Promise<AuthResponse> {
+  async loginUser(email: string, password: string) {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      throw new Error('Invalid credentials');
+      throw new Error('Credenciais inválidas');
     }
 
     return this.generateAuthResponse(user);
@@ -56,31 +39,30 @@ export class AuthService {
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
+        include: { assistants: true }
       });
 
-      if (!user) throw new Error('User not found ');
+      if (!user) throw new Error('Usuário não encontrado');
       return user;
     } catch (error) {
-      console.error('Token validation error:', error);
-      throw new Error('Invalid token');
+      console.error('[AuthService] Erro na validação do token:', error);
+      throw new Error('Token inválido ou expirado');
     }
   }
 
-  private generateAuthResponse(user: User): AuthResponse {
+  private generateAuthResponse(user: User) {
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    const { password, ...userData } = user;
-
-    // Configuração de cookies sincronizada com o ambiente
     return {
-      user: userData,
+      user: (({ password, ...rest }) => rest)(user), // Remove a senha
       token,
       cookieOptions: {
         httpOnly: true,
-        secure: true, // 🔴 Apenas HTTPS em produção
-        sameSite: isProduction ? 'none' : 'lax', // 🔴 sameSite none requer HTTPS
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        maxAge: 604800000, // 7 dias
         path: '/',
-      },
+        domain: isProduction ? '.axxus.netlify.app' : undefined
+      }
     };
   }
 }
