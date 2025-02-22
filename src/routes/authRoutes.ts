@@ -53,13 +53,11 @@ router.get('/validate', async (req, res) => {
       'Access-Control-Allow-Origin': req.headers.origin || allowedOrigins[0],
       'Access-Control-Allow-Credentials': 'true'
     });
-
-    const tokenFromCookie = req.cookies.token;
-    const tokenFromHeader = req.headers.authorization?.split(' ')[1];
+    
     // Debug: Log completo dos cookies recebidos
     console.log('Cookies recebidos na validação:', req.cookies);
 
-    const token = tokenFromCookie || tokenFromHeader
+    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
     
     if (!token) {
       console.log('Token ausente na validação');

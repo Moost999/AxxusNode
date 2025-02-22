@@ -58,7 +58,7 @@ export class AuthService {
         where: { id: decoded.userId },
       });
 
-      if (!user) throw new Error('User not ');
+      if (!user) throw new Error('User not found ');
       return user;
     } catch (error) {
       console.error('Token validation error:', error);
