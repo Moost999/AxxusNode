@@ -53,7 +53,7 @@ router.get('/validate', async (req, res) => {
       'Access-Control-Allow-Origin': req.headers.origin || allowedOrigins[0],
       'Access-Control-Allow-Credentials': 'true'
     });
-    
+
     // Debug: Log completo dos cookies recebidos
     console.log('Cookies recebidos na validação:', req.cookies);
 

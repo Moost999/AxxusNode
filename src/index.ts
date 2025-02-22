@@ -80,10 +80,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next(); // Continuar para o próximo middleware
 });
 
-app.use((req: Request, res: Response, next: NextFunction) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
-  next();
-});
 // ==================== PUBLIC ROUTES ====================
 app.use('/api/auth', authRoutes);
 
