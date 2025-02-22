@@ -55,7 +55,7 @@ router.get('/validate', async (req, res) => {
     });
 
     // Debug: Log completo dos cookies recebidos
-    console.log('Cookies recebidos na validação:', req.headers.cookie);
+    console.log('Cookies recebidos na validação:', req.cookies.token);
 
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
     
