@@ -18,78 +18,75 @@ import { authenticate } from './middleware/auth';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3001;
-const isProduction = process.env.NODE_ENV === 'production'; // Variável para verificar o ambiente
+const isProduction = process.env.NODE_ENV === 'production';
 
 // ==================== CORS CONFIGURATION ====================
 const allowedOrigins = [
-  'https://axxus-front.vercel.app',
-  'https://axxus-front-git-main-axxus.vercel.app',
-  'http://localhost:3000',
   'https://axxus.netlify.app',
-  'http://192.168.0.2:3000'
+  'http://localhost:3000',
+  'https://axxus-front.vercel.app'
 ];
 
-const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Log de depuração para verificar origens
-    console.log(`[CORS] Origin received: ${origin} | Environment: ${process.env.NODE_ENV}`);
-
-    // Permitir todas origens em desenvolvimento
-    if (!isProduction) {
-      callback(null, true);
-      return;
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin && !isProduction) {
+      return callback(null, true);
     }
-
-    // Verificar origens permitidas em produção
-    if (!origin || allowedOrigins.includes(origin)) {
+    
+    if (origin && allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error("Not allowed by CORS"));
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-  exposedHeaders: ["Set-Cookie", "Authorization"],
-  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  exposedHeaders: ['Set-Cookie', 'Authorization'],
+  optionsSuccessStatus: 200
 };
 
 // ==================== MIDDLEWARE ORDER ====================
-// Ordem crítica dos middlewares
-app.use(cors(corsOptions)); // CORS deve ser o primeiro
-app.options('*', cors(corsOptions)); // Pré-flight para todas rotas
-app.use(cookieParser()); // Deve vir antes do express.json()
-app.use(express.json({ limit: '10mb' })); // Para parsear JSON
-app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Para parsear URL-encoded bodies
+app.use((req, res, next) => {
+  const origin = req.headers.origin || '';
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
+  next();
+});
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+app.use(cookieParser());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ==================== SECURITY HEADERS ====================
 app.use((req: Request, res: Response, next: NextFunction) => {
-  // Headers de segurança em produção
   if (isProduction) {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
   }
 
-  // Logging em desenvolvimento
   if (!isProduction) {
     console.log(`${req.method} ${req.url}`);
-    console.log("Headers:", req.headers);
-    console.log("Cookies:", req.cookies);
+    console.log('Headers:', req.headers);
+    console.log('Cookies:', req.cookies);
   }
 
-  next(); // Continuar para o próximo middleware
+  next();
 });
 
-// ==================== PUBLIC ROUTES ====================
+// ==================== ROUTES ====================
 app.use('/api/auth', authRoutes);
-
-// Endpoint de saúde
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', environment: process.env.NODE_ENV });
 });
 
 // ==================== PROTECTED ROUTES ====================
-app.use('/api', authenticate); // Middleware de autenticação
+app.use('/api', authenticate);
 app.use('/api/assistants', assistantRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
@@ -99,15 +96,14 @@ app.use('/api/settings', settingRoutes);
 app.use('/api/notifications', notificationRoute);
 app.use('/api/ads', adRoutes);
 
-// ==================== 404 HANDLER ====================
+// ==================== ERROR HANDLERS ====================
 app.use((req: Request, res: Response) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
 
-// ==================== GLOBAL ERROR HANDLER ====================
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Global Error:', err.message);
-  console.error(err.stack); // Log do erro no console
+  console.error(err.stack);
 
   res.status(500).json({
     error: 'Internal Server Error',
@@ -115,7 +111,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-// ==================== START SERVER ====================
+// ==================== SERVER START ====================
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT} (${isProduction ? 'production' : 'development'} mode)`);
+  console.log(`Server running on port ${PORT} (${isProduction ? 'production' : 'development'})`);
 });
