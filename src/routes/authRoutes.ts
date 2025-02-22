@@ -54,10 +54,12 @@ router.get('/validate', async (req, res) => {
       'Access-Control-Allow-Credentials': 'true'
     });
 
+    const tokenFromCookie = req.cookies.token;
+    const tokenFromHeader = req.headers.authorization?.split(' ')[1];
     // Debug: Log completo dos cookies recebidos
     console.log('Cookies recebidos na validação:', req.cookies);
 
-    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+    const token = tokenFromCookie || tokenFromHeader
     
     if (!token) {
       console.log('Token ausente na validação');

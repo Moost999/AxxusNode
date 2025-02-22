@@ -56,23 +56,6 @@ export class AuthService {
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          password: true,
-          tokens: true,
-          availableMessages: true,
-          adViews: true,
-          lastAdView: true,
-          adCooldown: true,
-          groqApiKey: true,
-          geminiApiKey: true,
-          createdAt: true,
-          updatedAt: true,
-          assistants: true,
-          notifications: true,
-        },
       });
 
       if (!user) throw new Error('User not found');
