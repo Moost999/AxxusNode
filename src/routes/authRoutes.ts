@@ -49,6 +49,8 @@ router.post("/login", async (req, res) => {
 router.get('/validate', async (req, res) => {
   try {
 
+    res.setHeader('Access-Control-Allow-Origin', 'https://axxus.netlify.app');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     // Debug: Log completo dos cookies recebidos
     console.log('Cookies recebidos na validação:', req.headers.authorization?.split(" ")[1]);
 
@@ -73,7 +75,7 @@ router.get('/validate', async (req, res) => {
 
     res.status(200).json({
       success: true,
-      user,
+      userData,
     });
 
   } catch (error) {
