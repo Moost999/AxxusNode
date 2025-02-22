@@ -19,8 +19,15 @@ router.post('/login', async (req, res) => {
 
 router.get('/validate', async (req, res) => {
   try {
+    console.log('Cookies recebidos:', req.cookies); // Debug cookies
+    console.log('Authorization header:', req.headers.authorization); // Debug header
+
     const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
-    if (!token) throw new Error('Token não fornecido');
+    if (!token) {
+      console.error('Token não encontrado');
+       res.status(401).json({ success: false, message: 'Token não fornecido' });
+      return
+      }
 
     const user = await authService.validateToken(token);
     const { password, ...userData } = user;
