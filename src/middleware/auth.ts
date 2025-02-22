@@ -23,8 +23,9 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   try {
     // Verificar tanto o cookie quanto o header Authorization
     const tokenFromCookie = req.cookies.token;
+    const tokenFromDocument = document.cookie;
     const tokenFromHeader = req.headers.authorization?.split(" ")[1];
-    const token = tokenFromCookie || tokenFromHeader;
+    const token = tokenFromDocument || tokenFromHeader || tokenFromCookie;
 
     if (!token) {
       console.log('Autenticação falhou: Token não encontrado');
