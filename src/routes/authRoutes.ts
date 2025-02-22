@@ -20,12 +20,11 @@ const cookieOptions = {
 router.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
+    const {user, token, cookieOptions} = await authService.loginUser(email, password)
     const authResponse = await authService.loginUser(email, password);
 
     console.log("Resposta do login:", authResponse); // Depuração
-
-    const { token } = authResponse;
-    res.cookie('token', token, {
+    res.cookie(token, cookieOptions, {
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
@@ -33,7 +32,7 @@ router.post("/api/auth/login", async (req, res) => {
       domain: isProduction ? '.onrender.com' : '.onrender.com',
       path: '/' // Ajuste conforme seu domínio
     }); 
-    res.status(200).json({ user: authResponse.user, token: authResponse.token });
+    res.status(200).json({ user, token, cookieOptions });
   } catch (error) {
     console.error("Erro no login:", error);
     res.status(401).json({ error: "Credenciais inválidas" });
