@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { WhatsAppClient } from '../services/whatsappService';
 import { MessageProcessingService } from '../services/messageProcessingService';
 import { AssistantService } from '../services/assistantService';
-import { error } from 'console';
 
 export class WhatsAppController {
   private whatsappClient: WhatsAppClient;
@@ -11,34 +10,35 @@ export class WhatsAppController {
   constructor() {
     this.messageService = new MessageProcessingService(new AssistantService());
     
-    // Criar o cliente do WhatsApp com o handler de mensagens
     this.whatsappClient = new WhatsAppClient(async (from: string, body: string, assistantId: string) => {
       try {
+        console.log('[1] Mensagem recebida de:', from, 'Conteúdo:', body);
         const response = await this.messageService.processMessage(from, body, assistantId);
+        console.log('[2] Resposta gerada:', response);
         await this.whatsappClient.sendMessage(assistantId, from, response);
+        console.log('[3] Mensagem enviada com sucesso para:', from);
       } catch (error) {
-        console.error('Error processing message:', error);
+        console.error('[ERRO] Fluxo principal:', error);
       }
     });
   }
 
   async connectWhatsApp(req: Request, res: Response) {
     try {
-      const { assistantId } = req.body;  // Pegar o assistantId do body ao invés de hardcoded
+      const { assistantId } = req.body;
+      console.log('[INÍCIO] Solicitação de conexão para assistant:', assistantId);
       
       if(!assistantId){
-        return res.status(400).json({error: "assistantId não informado"});
+        console.error('[ERRO] assistantId ausente');
+        return res.status(400).json({ error: "assistantId não informado" });
       }
       
       const qrCode = await this.whatsappClient.initializeClient(assistantId);
+      console.log('[QR CODE] Gerado para assistant:', assistantId);
     
-      res.json({
-        success: true,
-        qrCode,
-        message: 'Escaneie o QR code com o WhatsApp'
-      });
+      res.json({ success: true, qrCode, message: 'Escaneie o QR code com o WhatsApp' });
     } catch (error) {
-      console.error('Error connecting WhatsApp:', error);
+      console.error('[ERRO CRÍTICO] connectWhatsApp:', error);
       res.status(500).json({ error: 'Erro na conexão do WhatsApp' });
     }
   }
