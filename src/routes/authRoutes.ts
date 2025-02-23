@@ -8,7 +8,7 @@ const router = express.Router();
 
 // Rotas públicas
 router.post('/register', AuthController.register);
-router.post('/auth/login', AuthController.login);
+router.post('/login', AuthController.login);
 router.post('/check-email', async (req, res) => {
   try {
     const { email } = req.body;
