@@ -42,7 +42,7 @@ export class AuthService {
         sameSite: isProduction ? 'none' : 'lax',
         maxAge: 604800000, // 7 dias
         path: '/',
-        domain: isProduction ? '.axxus.netlify.app' : undefined
+        domain: '.axxus.netlify.app'
       } as express.CookieOptions
     };
   }
