@@ -4,50 +4,215 @@ import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
-const JWT_EXPIRES_IN = '1h';
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+const JWT_EXPIRATION = '24h';
 
-// Função de login
-export const login = async (req: Request, res: Response) => {
-  try {
-    const { email, password } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
+class AuthController {
+  async register(req: Request, res: Response) {
+    try {
+      const { name, email, password } = req.body;
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      res.status(401).json({ error: 'Credenciais inválidas' });
-      return
+      // Verificar se usuário já existe
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUser) {
+         res.status(400).json({ error: 'Email já cadastrado' });
+         return
+      }
+
+      // Hash da senha
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Criar novo usuário
+      const user = await prisma.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          availableMessages: 10 // Mensagens iniciais gratuitas
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          createdAt: true
+        }
+      });
+
+      // Gerar token
+      const token = jwt.sign(
+        { userId: user.id },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRATION }
+      );
+
+      res.status(201).json({
+        user,
+        token
+      });
+    } catch (error) {
+      console.error('Erro no registro:', error);
+      res.status(500).json({ error: 'Erro ao criar conta' });
     }
-
-    // Gera o token JWT
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN
-    });
-
-    // Retorna o token no corpo da resposta (não usa cookies)
-    res.json({ 
-      user: { id: user.id, name: user.name, email: user.email },
-      token 
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: 'Erro no servidor' });
-  }
-};
-
-// Middleware de autenticação
-export const authenticate = (req: Request, res: Response, next: Function) => {
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-     res.status(401).json({ error: 'Token não fornecido' });
-     return
   }
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    req.userId = decoded.userId; // Adiciona o ID do usuário à requisição
-    next();
-  } catch (error) {
-    res.status(401).json({ error: 'Token inválido ou expirado' });
+  async login(req: Request, res: Response) {
+    try {
+      const { email, password } = req.body;
+
+      // Buscar usuário
+      const user = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (!user) {
+         res.status(401).json({ error: 'Credenciais inválidas' });
+         return
+      }
+
+      // Verificar senha
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+         res.status(401).json({ error: 'Credenciais inválidas' });
+         return
+      }
+
+      // Gerar token
+      const token = jwt.sign(
+        { userId: user.id },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRATION }
+      );
+
+      // Retornar usuário sem a senha
+      const { password: _, ...userWithoutPassword } = user;
+
+      res.json({
+        user: userWithoutPassword,
+        token
+      });
+    } catch (error) {
+      console.error('Erro no login:', error);
+      res.status(500).json({ error: 'Erro ao fazer login' });
+    }
   }
-};
+
+  async getProfile(req: Request, res: Response) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.userId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          createdAt: true,
+          availableMessages: true
+        }
+      });
+
+      if (!user) {
+         res.status(404).json({ error: 'Usuário não encontrado' });
+         return
+      }
+
+      res.json({ user });
+    } catch (error) {
+      console.error('Erro ao buscar perfil:', error);
+      res.status(500).json({ error: 'Erro ao buscar perfil' });
+    }
+  }
+
+  async updateProfile(req: Request, res: Response) {
+    try {
+      const { name, email } = req.body;
+
+      const user = await prisma.user.update({
+        where: { id: req.userId },
+        data: { name, email },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          createdAt: true
+        }
+      });
+
+      res.json({ user });
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      res.status(500).json({ error: 'Erro ao atualizar perfil' });
+    }
+  }
+
+  async changePassword(req: Request, res: Response) {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      // Buscar usuário com senha
+      const user = await prisma.user.findUnique({
+        where: { id: req.userId }
+      });
+
+      if (!user) {
+         res.status(404).json({ error: 'Usuário não encontrado' });
+         return
+      }
+
+      // Verificar senha atual
+      const validPassword = await bcrypt.compare(currentPassword, user.password);
+      if (!validPassword) {
+         res.status(401).json({ error: 'Senha atual incorreta' });
+         return
+      }
+
+      // Hash da nova senha
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Atualizar senha
+      await prisma.user.update({
+        where: { id: req.userId },
+        data: { password: hashedPassword }
+      });
+
+      res.json({ message: 'Senha alterada com sucesso' });
+    } catch (error) {
+      console.error('Erro ao alterar senha:', error);
+      res.status(500).json({ error: 'Erro ao alterar senha' });
+    }
+  }
+
+  async validateToken(req: Request, res: Response) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.userId },
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      });
+
+      if (!user) {
+         res.status(401).json({ 
+          valid: false,
+          error: 'Usuário não encontrado' 
+        });
+        return
+      }
+
+      res.json({ 
+        valid: true,
+        user 
+      });
+    } catch (error) {
+      res.status(401).json({ 
+        valid: false,
+        error: 'Token inválido' 
+      });
+    }
+  }
+}
+
+export default new AuthController();
