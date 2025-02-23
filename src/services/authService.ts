@@ -38,11 +38,11 @@ export class AuthService {
       token,
       cookieOptions: {
         httpOnly: true,
-        secure: true,
-        sameSite:"none",
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
         maxAge: 604800000, // 7 dias
         path: '/',
-        domain: ".axxusnode.onrender.com"
+        domain: isProduction ? '.axxus.netlify.app' : undefined
       } as express.CookieOptions
     };
   }
