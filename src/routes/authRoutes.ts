@@ -28,7 +28,7 @@ router.post("/login", async (req, res) => {
       sameSite: 'none',//me exige 'None' + Secure em produção
       maxAge: 604800000,
       path: '/',
-      domain: '.axxus.netlify.app' // Domain só em produção
+      domain: "https://axxusnode.onrender.com"
     });
     // Retorna o usuário (sem a senha) e o token
     res.status(200).json({ 
