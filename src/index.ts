@@ -28,6 +28,7 @@ const allowedOrigins = [
   'https://axxus.netlify.app',
   'http://192.168.0.2:3000'
 ];
+
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Log de depuração para verificar origens
@@ -40,7 +41,6 @@ const corsOptions = {
     }
     // Verificar origens permitidas em produção
     if (!origin || allowedOrigins.includes(origin)) {
-      
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -49,7 +49,6 @@ const corsOptions = {
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-  exposedHeaders: ["Set-Cookie", "Authorization"],
   optionsSuccessStatus: 200,
 };
 

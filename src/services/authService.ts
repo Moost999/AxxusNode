@@ -57,11 +57,11 @@ export class AuthService {
       token,
       cookieOptions: {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax',
+        secure: isProduction, // Apenas HTTPS em produção
+        sameSite: 'lax',
         maxAge: 604800000, // 7 dias
         path: '/',
-        domain: isProduction ? '.axxus.netlify.app' : undefined
+        domain: isProduction ? '.axxus-front.vercel.app' : undefined // Domínio correto
       }
     };
   }
