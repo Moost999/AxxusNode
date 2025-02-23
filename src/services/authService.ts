@@ -40,7 +40,7 @@ export class AuthService {
         httpOnly: true,
         secure: true,
         sameSite: "none",
-        maxAge: 604800000, // 7 dias
+        maxAge: 604800000, // 7 di
         path: '/',
         domain: '.axxus.netlify.app'
       } as express.CookieOptions
