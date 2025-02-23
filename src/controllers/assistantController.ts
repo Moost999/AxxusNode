@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 // Extendendo a interface Request do Express
 interface AuthenticatedRequest extends Request {
   userId: string;
-  user?: any;
+  user: string;
 }
 
 class AssistantController {
