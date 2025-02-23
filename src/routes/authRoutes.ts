@@ -22,8 +22,14 @@ router.post("/login", async (req, res) => {
       : {};
 
     // Define o cookie no response
-    res.cookie('token', token)
-
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: isProduction, // Permite HTTP em localhost
+      sameSite: 'none',//me exige 'None' + Secure em produção
+      maxAge: 604800000,
+      path: '/',
+      domain: '.axxus.netlify.app' // Domain só em produção
+    });
     // Retorna o usuário (sem a senha) e o token
     res.status(200).json({ 
       user: {
