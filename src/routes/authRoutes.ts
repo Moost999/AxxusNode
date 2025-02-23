@@ -1,53 +1,111 @@
 import express from 'express';
 import { AuthService } from '../services/authService';
+import { PrismaClient } from '@prisma/client';
 
 const router = express.Router();
 const authService = new AuthService();
+const prisma = new PrismaClient();
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = ['http://localhost:3000', 'https://axxus.netlify.app']; // Add your allowed origins here
 
-router.post('/login', async (req, res) => {
+// Rota de login corrigida
+router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    // Chamada correta ao serviço de autenticação
     const { user, token, cookieOptions } = await authService.loginUser(email, password);
 
-    res.cookie('token', token);
-    res.status(200).json({ user, token });
+    // Configuração de domínio dinâmica
+    const domainOptions = isProduction 
+      ? { domain: '.axxus.netlify.app' } // Domínio do frontend
+      : {};
+
+    res.cookie('token', token, {
+      ...cookieOptions,
+      ...domainOptions // Aplica as opções de domínio
+    });
+
+    res.status(200).json({ 
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        availableMessages: user.availableMessages
+      }, 
+      token 
+    });
+
   } catch (error) {
-    console.error('[Login] Erro:', error);
-    res.status(401).json({ error: 'Credenciais inválidas' });
+    console.error("Erro no login:", error);
+    res.status(401).json({ 
+      error: "Credenciais inválidas",
+      message: error instanceof Error ? error.message : "Erro desconhecido"
+    });
   }
 });
 
+// Rota de validação corrigida
 router.get('/validate', async (req, res) => {
   try {
-    console.log('Cookies recebidos:', req.cookies); // Debug cookies
-    console.log('Authorization header:', req.headers.authorization); // Debug header
+    // Configuração de CORS dinâmica
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
 
-    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    // Debug: Log completo dos cookies recebidos
+    console.log('Cookies recebidos na validação:', req.cookies);
+
+    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+    
     if (!token) {
-      console.error('Token não encontrado');
-       res.status(401).json({ success: false, message: 'Token não fornecido' });
-      return
-      }
+      console.log('Token ausente na validação');
+      res.status(401).json({ 
+        success: false, 
+        message: 'Token não fornecido' 
+      });
+      return;
+    }
+
+    // Debug: Verificar conteúdo do token
+    console.log('Token recebido:', token.substring(0, 10) + '...');
 
     const user = await authService.validateToken(token);
+    
+    // Garantir que a senha não seja enviada
     const { password, ...userData } = user;
 
-    res.status(200).json({ success: true, user: userData });
+    res.status(200).json({
+      success: true,
+      user: userData,
+    });
+
   } catch (error) {
-    console.error('[Validate] Erro:', error);
-    res.clearCookie('token');
-    res.status(401).json({ success: false, message: 'Sessão expirada' });
+    console.error('Erro detalhado na validação:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Sessão expirada ou inválida',
+      debugInfo: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
   }
 });
 
+// Rota de logout corrigida
 router.post('/logout', (req, res) => {
   res.clearCookie('token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
+    domain: isProduction ? '.axxus.netlify.app' : undefined
   });
-  res.status(200).json({ success: true, message: 'Logout realizado' });
+  
+  res.status(200).json({ 
+    success: true, 
+    message: 'Sessão encerrada com sucesso' 
+  });
 });
 
 export default router;

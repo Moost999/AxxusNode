@@ -7,24 +7,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 const isProduction = process.env.NODE_ENV === 'production';
 
 export class AuthService {
-  async registerUser(name: string, email: string, password: string) {
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) throw new Error('Email já registrado');
-
-    const hashedPassword = await bcrypt.hash(password, 12);
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        tokens: 100,
-        availableMessages: 100,
-      },
-    });
-
-    return this.generateAuthResponse(user);
-  }
-
   async loginUser(email: string, password: string) {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -36,13 +18,19 @@ export class AuthService {
 
   async validateToken(token: string): Promise<User> {
     try {
+      // Verifica se o token é válido
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+
+      // Busca o usuário no banco de dados
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
         include: { assistants: true }
       });
 
-      if (!user) throw new Error('Usuário não encontrado');
+      if (!user) {
+        throw new Error('Usuário não encontrado');
+      }
+
       return user;
     } catch (error) {
       console.error('[AuthService] Erro na validação do token:', error);
@@ -58,10 +46,10 @@ export class AuthService {
       cookieOptions: {
         httpOnly: true,
         secure: isProduction, // Apenas HTTPS em produção
-        sameSite: 'lax',
+        sameSite: isProduction ? 'none' : 'lax', // SameSite=None em produção, Lax em desenvolvimento
         maxAge: 604800000, // 7 dias
         path: '/',
-        domain: isProduction ? '.axxus-front.vercel.app' : undefined // Domínio correto
+        domain: isProduction ? '.axxus.netlify.app' : undefined // Domínio correto
       }
     };
   }
