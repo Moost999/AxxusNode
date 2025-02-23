@@ -42,7 +42,7 @@ export class AuthService {
         sameSite: "none",
         maxAge: 604800000, // 7 di
         path: '/',
-        domain: '.axxus.netlify.app'
+        domain: '.axxusnode.onrender.com'
       } as express.CookieOptions
     };
   }
