@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 // Defina uma interface para a requisição autenticada
 interface AuthenticatedRequest extends Request {
-  userId?: string;
+  userId: string;
 }
 
 export const dashboardController = {
