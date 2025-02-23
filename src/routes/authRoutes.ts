@@ -6,26 +6,25 @@ const router = express.Router();
 const authService = new AuthService();
 const prisma = new PrismaClient();
 const isProduction = process.env.NODE_ENV === 'production';
-const allowedOrigins = ['http://localhost:3000', 'https://axxus.netlify.app']; // Add your allowed origins here
+const allowedOrigins = ['http://localhost:3000', 'https://axxus.netlify.app']; // Origens permitidas
 
-// Rota de login corrigida
+// Rota de login
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // Chamada correta ao serviço de autenticação
+    // Chamada ao serviço de autenticação
     const { user, token, cookieOptions } = await authService.loginUser(email, password);
 
     // Configuração de domínio dinâmica
     const domainOptions = isProduction 
-      ? { domain: '.axxus.netlify.app' } // Domínio do frontend
+      ? { domain: '.axxus.netlify.app' } // Domínio do frontend em produção
       : {};
 
-    res.cookie('token', token, {
-      ...cookieOptions,
-      ...domainOptions // Aplica as opções de domínio
-    });
+    // Define o cookie no response
+    res.cookie('token', token)
 
+    // Retorna o usuário (sem a senha) e o token
     res.status(200).json({ 
       user: {
         id: user.id,
@@ -45,7 +44,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Rota de validação corrigida
+// Rota de validação
 router.get('/validate', async (req, res) => {
   try {
     // Configuração de CORS dinâmica
@@ -55,31 +54,34 @@ router.get('/validate', async (req, res) => {
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
 
-    // Debug: Log completo dos cookies recebidos
+    // Debug: Log dos cookies recebidos
     console.log('Cookies recebidos na validação:', req.cookies);
 
+    // Extrai o token dos cookies ou do cabeçalho Authorization
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
     
     if (!token) {
       console.log('Token ausente na validação');
-      res.status(401).json({ 
+       res.status(401).json({ 
         success: false, 
         message: 'Token não fornecido' 
       });
-      return;
+      return
     }
 
     // Debug: Verificar conteúdo do token
     console.log('Token recebido:', token.substring(0, 10) + '...');
 
+    // Valida o token e busca o usuário
     const user = await authService.validateToken(token);
     
     // Garantir que a senha não seja enviada
     const { password, ...userData } = user;
 
+    // Retorna os dados do usuário
     res.status(200).json({
       success: true,
-      user: userData,
+      user: userData, // Retorna o objeto userData como "user" para consistência
     });
 
   } catch (error) {
@@ -92,16 +94,18 @@ router.get('/validate', async (req, res) => {
   }
 });
 
-// Rota de logout corrigida
+// Rota de logout
 router.post('/logout', (req, res) => {
+  // Limpa o cookie de token
   res.clearCookie('token', {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    sameSite: isProduction ? 'none' : 'lax', // Tipos corretos para sameSite
     path: '/',
     domain: isProduction ? '.axxus.netlify.app' : undefined
   });
   
+  // Retorna uma mensagem de sucesso
   res.status(200).json({ 
     success: true, 
     message: 'Sessão encerrada com sucesso' 
