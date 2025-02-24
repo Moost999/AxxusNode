@@ -1,54 +1,56 @@
-// src/services/userService.ts
-import { Prisma, PrismaClient } from '@prisma/client'
-import bcrypt from 'bcrypt'
+import { PrismaClient } from "@prisma/client";
+
 const prisma = new PrismaClient();
-interface CreateUserData {
-  name: string
-  email: string
-  password: string
-}
 
-export async function createUser(data: CreateUserData) {
-  const existingUser = await prisma.user.findUnique({
-    where: { email: data.email }
-  })
+class UserService {
+  // Método para carregar os dados do usuário (tokens e mensagens)
+  async getUserData(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { tokens: true, availableMessages: true },
+    });
 
-  if (existingUser) {
-    throw new Error("Email already registered")
-  }
-
-  const hashedPassword = await bcrypt.hash(data.password, 10)
-
-  const user = await prisma.user.create({
-    data: {
-      name: data.name,
-      email: data.email,
-      password: hashedPassword,
-      tokens: 0,          // Valor padrão conforme schema
-      availableMessages: 100, // Valor padrão
-      adViews: 0,
-      adCooldown: 24,
-      groqApiKey: '',
-      geminiApiKey: ''
+    if (!user) {
+      throw new Error("Usuário não encontrado");
     }
-  })
 
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    tokens: user.tokens,
-    availableMessages: user.availableMessages
+    return {
+      tokens: user.tokens,
+      messages: user.availableMessages,
+    };
+  }
+
+  // Método para trocar tokens por mensagens
+  async convertTokensToMessages(userId: string, tokens: number) {
+    if (tokens < 10) {
+      throw new Error("Mínimo de 10 tokens para troca");
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || user.tokens < tokens) {
+      throw new Error("Tokens insuficientes");
+    }
+
+    // Calcula quantas mensagens o usuário ganhará
+    const messagesToAdd = Math.floor(tokens / 10);
+
+    // Atualiza os tokens e mensagens do usuário
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        tokens: user.tokens - tokens,
+        availableMessages: user.availableMessages + messagesToAdd,
+      },
+    });
+
+    return {
+      tokens: updatedUser.tokens,
+      messagesAdded: messagesToAdd,
+    };
   }
 }
 
-// Adicione a função faltante
-export async function getUserTokens(id: string) {
-  const user = await prisma.user.findUnique({ 
-    where: { id },
-    select: { tokens: true }
-  })
-  
-  if (!user) throw new Error("User not found")
-  return user.tokens
-}
+export const userService = new UserService();

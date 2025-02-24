@@ -1,30 +1,50 @@
-// src/controllers/userController.ts
-import type { Request, Response } from "express"
-import * as userService from "../services/userService"
+import { Request, Response } from "express";
+import { userService } from "../services/userService";
 
-export async function createUser(req: Request, res: Response) {
-  try {
-    const { name, email, password } = req.body // Adicione a extração da senha
-    const user = await userService.createUser({ name, email, password }) // Passe a senha
-    res.status(201).json(user)
-  } catch (error) {
-    console.error("Error creating user:", error)
-    res.status(500).json({ error: error instanceof Error ? error.message : "Failed to create user" })
+class UserController {
+  // Método para carregar os dados do usuário
+  async getUserData(req: Request, res: Response) {
+    try {
+      const userId = req.userId; // Obtém o userId do middleware de autenticação
+      const userData = await userService.getUserData(userId);
+      res.json(userData);
+    } catch (error) {
+      res.status(500).json({
+        error: "Erro ao carregar dados do usuário",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    }
+  }
+
+  // Método para trocar tokens por mensagens
+  async convertTokensToMessages(req: Request, res: Response) {
+    try {
+      const userId = req.userId; // Obtém o userId do middleware de autenticação
+      const { tokens } = req.body;
+
+      const result = await userService.convertTokensToMessages(userId, tokens);
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({
+        error: "Erro ao trocar tokens por mensagens",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    }
+  }
+
+  // Método para obter a quantidade de tokens do usuário
+  async getTokens(req: Request, res: Response) {
+    try {
+      const userId = req.userId; // Obtém o userId do middleware de autenticação
+      const user = await userService.getUserData(userId);
+      res.json({ tokens: user.tokens });
+    } catch (error) {
+      res.status(500).json({
+        error: "Erro ao obter tokens do usuário",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    }
   }
 }
 
-export async function getUserTokens(req: Request, res: Response) {
-  try {
-    // Use o userId injetado pelo middleware de autenticação
-    const userId = req.userId; // Modificado de req.params para req.userId
-    
-    const tokens = await userService.getUserTokens(userId!);
-    res.json({ tokens });
-    
-  } catch (error) {
-    console.error("Erro ao buscar tokens:", error);
-    res.status(500).json({ 
-      error: error instanceof Error ? error.message : "Falha na busca de tokens" 
-    });
-  }
-}
+export const userController = new UserController();
