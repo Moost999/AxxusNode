@@ -1,4 +1,3 @@
-// whatsappService.ts
 import { Client, LocalAuth, Message } from 'whatsapp-web.js';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
@@ -55,7 +54,6 @@ export class WhatsAppClient {
   async initializeClient(assistantId: string): Promise<string> {
     console.log(`[WhatsAppClient] Starting initialization for assistant ${assistantId}`);
 
-    // Se já existe uma inicialização em andamento, retorna o QR code existente
     if (this.clientInitializationPromises.has(assistantId)) {
       console.log(`[WhatsAppClient] Initialization already in progress for ${assistantId}`);
       const existingQr = this.qrCodes.get(assistantId);
