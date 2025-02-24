@@ -65,23 +65,9 @@ class AssistantController {
 
       const assistants = await prisma.assistant.findMany({
         where: { userId },
-        include: {
-          user: {
-            select: {
-              name: true,
-              id: true,
-            }
-          }
-        }
       });
-       // Retornar os assistentes com os dados do usuário
-    const assistantsWithUserData = assistants.map(assistant => ({
-      ...assistant,
-      userId: assistant.userId,
-      userName: assistant.user?.name,  // Adiciona o nome do usuário
-    }));
-
-    res.json(assistantsWithUserData);
+       res.json(assistants);
+       return
     } catch (error) {
       console.error("Error getting assistants:", error);
        res.status(500).json({
