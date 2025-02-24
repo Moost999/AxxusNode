@@ -58,6 +58,7 @@ class AssistantController {
   public async getAssistants(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.userId;
+      const {page = 1 } = req.query;
       if (!userId) {
          res.status(401).json({ error: "Não autorizado" });
          return
