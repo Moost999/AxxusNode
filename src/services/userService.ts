@@ -22,7 +22,7 @@ class UserService {
 
   // Método para trocar tokens por mensagens
   async convertTokensToMessages(userId: string, tokens: number) {
-    if (tokens < 10) {
+    if (tokens < 1) {
       throw new Error("Mínimo de 10 tokens para troca");
     }
 
@@ -35,7 +35,7 @@ class UserService {
     }
 
     // Calcula quantas mensagens o usuário ganhará
-    const messagesToAdd = Math.floor(tokens / 10);
+    const messagesToAdd = Math.floor(tokens / 1);
 
     // Atualiza os tokens e mensagens do usuário
     const updatedUser = await prisma.user.update({
