@@ -50,4 +50,18 @@ cron.schedule('0 * * * *', async () => {
   }
 });
 
+router.patch('/read-all', authenticate, async (req, res) => {
+  try {
+    await prisma.notification.updateMany({
+      where: { userId: req.userId, read: false },
+      data: { read: true },
+    });
+
+    res.json({ success: true, message: "Todas as notificações foram marcadas como lidas." });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Falha ao marcar notificações como lidas" });
+  }
+});
+
+
 export default router;
