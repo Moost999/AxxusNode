@@ -9,51 +9,57 @@ const prisma = new PrismaClient();
 // Buscar notificações não lidas
 router.get('/', authenticate, async (req, res) => {
   try {
+    const userId = req.userId; // Correção: Pegando o ID do usuário autenticado
+    if (!userId) {
+       res.status(401).json({ success: false, message: "Não autorizado" });
+      return
+      }
+
     const notifications = await prisma.notification.findMany({
-      where: { userId: req.userId, read: false },
+      where: { userId, read: false },
       orderBy: { createdAt: 'desc' },
     });
+
     res.json({ success: true, data: notifications });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch notifications' });
   }
 });
 
-// Marcar como lida
-router.patch('/:id/read', authenticate, async (req, res) => {
+// Marcar uma notificação específica como lida
+router.patch('/me/read', authenticate, async (req, res) => {
   try {
-    await prisma.notification.update({
-      where: { id: req.params.id },
+    const userId = req.userId;
+    const notificationId = req.query.id as string; // Correção: pegando o ID via query params
+
+    if (!userId || !notificationId) {
+       res.status(400).json({ success: false, message: "ID da notificação é obrigatório" });
+      return
+      }
+
+    await prisma.notification.updateMany({
+      where: { id: notificationId, userId },
       data: { read: true },
     });
-    res.json({ success: true });
+
+    res.json({ success: true, message: "Notificação marcada como lida" });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to mark notification' });
+    res.status(500).json({ success: false, message: 'Falha ao marcar notificação como lida' });
   }
 });
 
-
-// Deleção automática (executa a cada hora)
-cron.schedule('0 * * * *', async () => {
-  try {
-    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
-
-    const deletedNotifications = await prisma.notification.deleteMany({
-      where: {
-        createdAt: { lt: twelveHoursAgo },
-      },
-    });
-
-    console.log(`Deleted ${deletedNotifications.count} notifications.`);
-  } catch (error) {
-    console.error('Error deleting notifications:', error);
-  }
-});
-
+// Marcar todas as notificações do usuário como lidas
 router.patch('/read-all', authenticate, async (req, res) => {
   try {
+    const userId = req.userId;
+    if (!userId) {
+       res.status(401).json({ success: false, message: "Não autorizado" });
+      
+      return
+      }
+
     await prisma.notification.updateMany({
-      where: { userId: req.userId, read: false },
+      where: { userId, read: false },
       data: { read: true },
     });
 
@@ -63,5 +69,18 @@ router.patch('/read-all', authenticate, async (req, res) => {
   }
 });
 
+// Deleção automática de notificações a cada 12 horas
+cron.schedule('0 * * * *', async () => {
+  try {
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+    const deletedNotifications = await prisma.notification.deleteMany({
+      where: { createdAt: { lt: twelveHoursAgo } },
+    });
+
+    console.log(`Deleted ${deletedNotifications.count} notifications.`);
+  } catch (error) {
+    console.error('Error deleting notifications:', error);
+  }
+});
 
 export default router;
