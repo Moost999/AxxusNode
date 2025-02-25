@@ -44,7 +44,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+  allowedHeaders: ["X-CSRF-Token", "X-Requested-With", "Accept", "Accept-Version", "Content-Length", "Content-MD5", "Content-Type", "Date", "X-Api-Version", "Authorization", "Cookie"],
   optionsSuccessStatus: 200,
 };
 
@@ -66,8 +66,16 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   res.setHeader('Access-Control-Allow-Origin', 'https://axxus-front.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cookie');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
+
+  // Tratar requisições OPTIONS (preflight)
+  if (req.method === 'OPTIONS') {
+     res.status(200).end();
+     return
+  }
+
   // Logging em desenvolvimento
   if (!isProduction) {
     console.log(`${req.method} ${req.url}`);
