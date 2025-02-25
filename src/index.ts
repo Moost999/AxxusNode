@@ -25,7 +25,6 @@ const allowedOrigins = [
   'https://axxus-front.vercel.app',
   'https://axxus-front-git-main-axxus.vercel.app',
   'http://localhost:3000',
-  'https://axxus.netlify.app',
   'http://192.168.0.2:3000'
 ];
 
