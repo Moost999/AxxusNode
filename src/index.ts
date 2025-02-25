@@ -23,9 +23,6 @@ const isProduction = process.env.NODE_ENV === 'production'; // Variável para ve
 // ==================== CORS CONFIGURATION ====================
 const allowedOrigins = [
   'https://axxus-front.vercel.app',
-  'https://axxus-front-git-main-axxus.vercel.app',
-  'http://localhost:3000',
-  'http://192.168.0.2:3000'
 ];
 
 const corsOptions = {
