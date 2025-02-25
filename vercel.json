@@ -6,11 +6,21 @@
       "use": "@vercel/node"
     }
   ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "http://192.168.0.2:3000" },
+        { "key": "Access-Control-Allow-Origin", "value": "https://axxus-front.vercel.app" },
         { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,PATCH,DELETE,OPTIONS" },
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" },
         { "key": "Access-Control-Allow-Credentials", "value": "true" }
