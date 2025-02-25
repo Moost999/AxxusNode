@@ -28,6 +28,7 @@ export class MessageProcessingService {
       if (!geminiKey) throw new Error('Gemini API key not configured');
       return generateGeminiResponse(messages, geminiKey);
     }
+    if (!groqKey) throw new Error('Groq API key not configured');
     return generateGroqResponse(messages, groqKey);
   }
 

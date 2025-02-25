@@ -2,13 +2,14 @@ import { Request, Response } from 'express';
 import { WhatsAppClient } from '../services/whatsappService';
 import { MessageProcessingService } from '../services/messageProcessingService';
 import { AssistantService } from '../services/assistantService';
+import { ApiKeyService } from '../services/apiKeyService';
 
 export class WhatsAppController {
   private whatsappClient: WhatsAppClient;
   private messageService: MessageProcessingService;
 
   constructor() {
-    this.messageService = new MessageProcessingService(new AssistantService());
+    this.messageService = new MessageProcessingService(new AssistantService(), new ApiKeyService());
     
     this.whatsappClient = new WhatsAppClient(async (from: string, body: string, assistantId: string) => {
       try {
