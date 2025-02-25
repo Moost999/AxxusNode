@@ -68,7 +68,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
   }
 
-  res.setHeader('Access-Control-Allow-Origin', 'https://axxus.netlify.app');
+  res.setHeader('Access-Control-Allow-Origin', 'https://axxus-front.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
   res.setHeader('Access-Control-Allow-Credentials', 'true');

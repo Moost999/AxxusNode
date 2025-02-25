@@ -1,11 +1,16 @@
-// src/providers/geminiProvider.ts
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_API_KEY } from '../config/enviroment';
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+export async function generateGeminiResponse(
+  messages: any[],
+  apiKey: string
+): Promise<string> {
+  if (!apiKey) throw new Error('Chave da API Gemini não configurada');
 
-export async function generateGeminiResponse(messages: any[]) {
-  const geminiModel = genAI.getGenerativeModel({ model: 'gemini-pro' });
-  const result = await geminiModel.generateContent(messages.map(msg => msg.content).join('\n'));
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+  
+  const result = await model.generateContent(
+    messages.map(msg => msg.content).join('\n')
+  );
   return result.response.text();
 }

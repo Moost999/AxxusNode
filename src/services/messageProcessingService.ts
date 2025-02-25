@@ -1,20 +1,20 @@
+import { Assistant } from '../models/assistant';
 import { generateGeminiResponse } from '../providers/geminiProvider';
 import { generateGroqResponse } from '../providers/groqProvider';
-import { Assistant } from '../models/assistant';
+import { ApiKeyService } from './apiKeyService';
 
 interface Conversation {
   history: Array<{ role: string; content: string }>;
   fromNumber: string;
   assistantId: string;
-  buffer: string; // Buffer para agrupar mensagens do usuário
-  timeoutId?: NodeJS.Timeout; // Timeout para aguardar mais mensagens
 }
 
 export class MessageProcessingService {
   private conversations: Map<string, Conversation> = new Map();
 
   constructor(
-    private assistantService: { getAssistantById: (id: string) => Promise<Assistant> }
+    private assistantService: { getAssistantById: (id: string) => Promise<Assistant> },
+    private apiKeyService: ApiKeyService
   ) {}
 
   private getConversationKey(fromNumber: string, assistantId: string): string {
@@ -22,71 +22,48 @@ export class MessageProcessingService {
   }
 
   private async getModelResponse(assistant: Assistant, messages: any[]): Promise<string> {
+    const { geminiKey, groqKey } = await this.apiKeyService.getUserApiKeys(assistant.id);
+
     if (assistant.modelType === 'gemini') {
-      return await generateGeminiResponse(messages);
-    } else {
-      return await generateGroqResponse(messages);
+      if (!geminiKey) throw new Error('Gemini API key not configured');
+      return generateGeminiResponse(messages, geminiKey);
     }
+    return generateGroqResponse(messages, groqKey);
   }
 
-  private async processBufferedMessage(conversationKey: string, conversation: Conversation) {
-    if (conversation.buffer) {
-      // Adiciona a mensagem bufferizada ao histórico
-      conversation.history.push({ role: 'user', content: conversation.buffer });
-      console.log('[7] Histórico após mensagem do usuário:', JSON.stringify(conversation.history, null, 2));
+  async processMessage(
+    fromNumber: string,
+    message: string,
+    assistantId: string
+  ): Promise<string> {
+    try {
+      if (!fromNumber || !message || !assistantId) {
+        throw new Error('Parâmetros inválidos');
+      }
 
-      const assistant = await this.assistantService.getAssistantById(conversation.assistantId);
+      const assistant = await this.assistantService.getAssistantById(assistantId);
+      const conversationKey = this.getConversationKey(fromNumber, assistantId);
+
+      let conversation = this.conversations.get(conversationKey) || {
+        history: [{
+          role: 'system',
+          content: `Personalidade: ${assistant.initialPrompt}\nInstruções: ${assistant.initialPrompt}`
+        }],
+        fromNumber,
+        assistantId
+      };
+
+      conversation.history.push({ role: 'user', content: message });
+      
       const aiResponse = await this.getModelResponse(assistant, conversation.history);
-
-      console.log('[8] Resposta da IA:', aiResponse);
+      
       conversation.history.push({ role: 'assistant', content: aiResponse });
       this.conversations.set(conversationKey, conversation);
 
-      // Limpa o buffer após processar
-      conversation.buffer = '';
-    }
-  }
-
-  async processMessage(fromNumber: string, message: string, assistantId: string): Promise<string> {
-    try {
-      if (!fromNumber || !message || !assistantId) {
-        throw new Error('Parâmetros inválidos: fromNumber, message e assistantId são obrigatórios.');
-      }
-
-      const conversationKey = this.getConversationKey(fromNumber, assistantId);
-      let conversation = this.conversations.get(conversationKey);
-
-      if (!conversation) {
-        const assistant = await this.assistantService.getAssistantById(assistantId);
-        conversation = {
-          history: [{
-            role: 'system',
-            content: `Personalidade: ${assistant.initialPrompt}\nInstruções: ${assistant.initialPrompt}`
-          }],
-          fromNumber,
-          assistantId,
-          buffer: '',
-        };
-        this.conversations.set(conversationKey, conversation);
-      }
-
-      // Adiciona a mensagem ao buffer
-      conversation.buffer += message + ' ';
-
-      // Reinicia o timeout se já existir
-      if (conversation.timeoutId) {
-        clearTimeout(conversation.timeoutId);
-      }
-
-      // Aguarda 5 segundos para ver se o usuário envia mais mensagens
-      conversation.timeoutId = setTimeout(async () => {
-        await this.processBufferedMessage(conversationKey, conversation!);
-      }, 5000); // 5 segundos de timeout
-
-      return 'Aguardando mais mensagens...'; // Resposta temporária
+      return aiResponse;
     } catch (error) {
-      console.error('[ERRO] processMessage:', error);
-      return 'Desculpe, ocorreu um erro ao processar sua mensagem.';
+      console.error('Erro no processamento:', error);
+      return 'Erro: Verifique suas chaves de API configuradas';
     }
   }
 }

@@ -52,9 +52,11 @@ export class MessageProcessingService {
       // Selecionar provider baseado na configuração do assistant
       let aiResponse: string;
       if (assistant.modelType === 'gemini') {
-        aiResponse = await generateGeminiResponse(conversation.history);
+        const geminiApiKey = 'your-gemini-api-key-here'; // Replace with the actual API key
+        aiResponse = await generateGeminiResponse(conversation.history, geminiApiKey);
       } else {
-        aiResponse = await generateGroqResponse(conversation.history);
+        const groqApiKey = 'your-groq-api-key-here'; // Replace with the actual API key
+        aiResponse = await generateGroqResponse(conversation.history, groqApiKey);
       }
 
       // Adicionar resposta ao histórico
