@@ -74,3 +74,17 @@ model Notification {
   createdAt DateTime @default(now())
   metadata  Json? // Dados extras (ex: tokenAmount)
 }
+
+model Lead {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  phone       String
+  assistantId String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Adicione esta linha para criar a chave única composta
+  @@unique([phone, assistantId], name: "phone_assistantId")
+
+  // Mantenha o relacionamento se necessário
+  // assistant Assistant @relation(fields: [assistantId], references: [id])
+}

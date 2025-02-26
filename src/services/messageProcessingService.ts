@@ -2,6 +2,7 @@ import { Assistant } from '../models/assistant';
 import { generateGeminiResponse } from '../providers/geminiProvider';
 import { generateGroqResponse } from '../providers/groqProvider';
 import { ApiKeyService } from './apiKeyService';
+import { LeadService } from './leadService';
 
 interface Conversation {
   history: Array<{ role: string; content: string }>;
@@ -14,7 +15,8 @@ export class MessageProcessingService {
 
   constructor(
     private assistantService: { getAssistantById: (id: string) => Promise<Assistant> },
-    private apiKeyService: ApiKeyService
+    private apiKeyService: ApiKeyService,
+    private leadService: LeadService
   ) {}
 
   private getConversationKey(fromNumber: string, assistantId: string): string {
@@ -41,6 +43,9 @@ export class MessageProcessingService {
       if (!fromNumber || !message || !assistantId) {
         throw new Error('Parâmetros inválidos');
       }
+
+      // Salvar o lead
+      await this.leadService.addLead(fromNumber, assistantId);
 
       const assistant = await this.assistantService.getAssistantById(assistantId);
       const conversationKey = this.getConversationKey(fromNumber, assistantId);

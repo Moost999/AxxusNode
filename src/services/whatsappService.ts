@@ -28,7 +28,7 @@ export class WhatsAppClient {
         console.log(`[WhatsAppClient] No existing session data found for assistant ${assistantId}`);
       }
     } catch (error) {
-      console.error(`[WhatsAppClient] Error clearing session data assistant ${assistantId}:`, error);
+      console.error(`[WhatsAppClient] Error clearing session data for assistant ${assistantId}:`, error);
     }
   }
 
@@ -175,5 +175,9 @@ export class WhatsAppClient {
       console.error(`[WhatsAppClient] Error sending message for client ${assistantId}:`, error);
       throw error;
     }
+  }
+
+  getClient(assistantId: string): Client | undefined {
+    return this.clients.get(assistantId);
   }
 }

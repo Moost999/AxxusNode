@@ -2,7 +2,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
-// Rotas
+// Importe suas rotas
 import assistantRoutes from './routes/assistantRoutes';
 import userRoutes from './routes/userRoutes';
 import whatsappRoutes from './routes/whatsappRoutes';
@@ -18,57 +18,32 @@ import { authenticate } from './middleware/auth';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3001;
-const isProduction = process.env.NODE_ENV === 'production'; // Variável para verificar o ambiente
+const isProduction = process.env.NODE_ENV === 'production';
 
 // ==================== CORS CONFIGURATION ====================
-const allowedOrigins = [
-  'https://axxus-front.vercel.app',
-];
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://axxus-front.vercel.app';
 
 const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Log de depuração para verificar origens
-    console.log(`[CORS] Origin received: ${origin} | Environment: ${process.env.NODE_ENV}`);
-
-    // Permitir todas origens em desenvolvimento
-    if (!isProduction) {
-      callback(null, true);
-      return;
-    }
-    // Verificar origens permitidas em produção
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: [FRONTEND_URL],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["X-CSRF-Token", "X-Requested-With", "Accept", "Accept-Version", "Content-Length", "Content-MD5", "Content-Type", "Date", "X-Api-Version", "Authorization", "Cookie"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept", "Cookie"],
   optionsSuccessStatus: 200,
 };
 
 // ==================== MIDDLEWARE ORDER ====================
-// Ordem crítica dos middlewares
-app.use(cors(corsOptions)); // CORS deve ser o primeiro
-app.options('*', cors(corsOptions)); // Pré-flight para todas rotas
-app.use(cookieParser()); // Deve vir antes do express.json()
-app.use(express.json({ limit: '10mb' })); // Para parsear JSON
-app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Para parsear URL-encoded bodies
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+app.use(cookieParser());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ==================== SECURITY HEADERS ====================
 app.use((req: Request, res: Response, next: NextFunction) => {
-  // Headers de segurança em produção
   if (isProduction) {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.setHeader('X-Content-Type-Options', 'nosniff');
   }
-
-  res.setHeader('Access-Control-Allow-Origin', 'https://axxus-front.vercel.app');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cookie');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400');
 
   // Tratar requisições OPTIONS (preflight)
   if (req.method === 'OPTIONS') {
@@ -79,11 +54,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   // Logging em desenvolvimento
   if (!isProduction) {
     console.log(`${req.method} ${req.url}`);
-    console.log("Headers:", req.headers);
-    console.log("Cookies:", req.cookies);
   }
 
-  next(); // Continuar para o próximo middleware
+  next();
 });
 
 // ==================== PUBLIC ROUTES ====================
@@ -91,11 +64,15 @@ app.use('/api/auth', authRoutes);
 
 // Endpoint de saúde
 app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok', environment: process.env.NODE_ENV });
+  res.status(200).json({ 
+    status: 'ok', 
+    environment: process.env.NODE_ENV,
+    message: 'API running on Render' 
+  });
 });
 
 // ==================== PROTECTED ROUTES ====================
-app.use('/api', authenticate); // Middleware de autenticação
+app.use('/api', authenticate);
 app.use('/api/assistants', assistantRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
@@ -113,12 +90,21 @@ app.use((req: Request, res: Response) => {
 // ==================== GLOBAL ERROR HANDLER ====================
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Global Error:', err.message);
-  console.error(err.stack); // Log do erro no console
+  console.error(err.stack);
 
   res.status(500).json({
     error: 'Internal Server Error',
     message: isProduction ? 'Something went wrong!' : err.message,
   });
+});
+
+// Capturar exceções não tratadas
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
 });
 
 // ==================== START SERVER ====================

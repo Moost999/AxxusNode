@@ -10,3 +10,5 @@ router.post("/connect-whatsapp", async (req, res) => {
 });
 
 export default router;
+
+router.get('/leads/:assistantId', whatsappController.getLeads);
