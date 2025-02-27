@@ -54,7 +54,7 @@ export class WhatsAppController {
 
   async getLeads(req: Request, res: Response) {
     try {
-      const { assistantId } = req.params;
+      const  assistantId  = "67bccbb3e8a35509dbe0307d"
       if (!assistantId) {
          res.status(400).json({ error: "assistantId é obrigatório" });
         return
