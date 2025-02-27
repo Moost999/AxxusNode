@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 
 // ==================== CORS CONFIGURATION ====================
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://axxus-front.vercel.app';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://axxusai.vercel.app';
 
 const corsOptions = {
   origin: [FRONTEND_URL],
