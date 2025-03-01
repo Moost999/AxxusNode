@@ -4,7 +4,6 @@ import { MessageProcessingService } from '../services/messageProcessingService';
 import { AssistantService } from '../services/assistantService';
 import { ApiKeyService } from '../services/apiKeyService';
 import { LeadService } from '../services/leadService';
-import { count } from 'console';
 
 export class WhatsAppController {
   private whatsappClient: WhatsAppClient;
@@ -39,9 +38,9 @@ export class WhatsAppController {
       
       if (!assistantId) {
         console.error('[ERRO] assistantId ausente');
-         res.status(400).json({ error: "assistantId não informado" });
-        return
-        }
+        res.status(400).json({ error: "assistantId não informado" });
+        return;
+      }
       
       const qrCode = await this.whatsappClient.initializeClient(assistantId);
       console.log('[QR CODE] Gerado para assistant:', assistantId);
@@ -55,11 +54,11 @@ export class WhatsAppController {
 
   async getLeads(req: Request, res: Response) {
     try {
-      const { assistantId } = req.params                                    // const assistantId  = "67bccbb3e8a35509dbe0307d" preset com userid fix
+      const { assistantId } = req.params;
       if (!assistantId) {
-         res.status(400).json({ error: "assistantId é obrigatório" });
-        return
-        }
+        res.status(400).json({ error: "assistantId é obrigatório" });
+        return;
+      }
       
       const leads = await this.leadService.getLeads(assistantId);
       res.json({ 
@@ -84,16 +83,14 @@ export class WhatsAppController {
 
   async getAllLeads(req: Request, res: Response) {
     try {
-      // Extrair o userId do token/sessão
-      // Assumindo que você tenha middleware de autenticação que adiciona user ao req
       const userId = req.user?.id; 
       
       if (!userId) {
-         res.status(401).json({ error: "Usuário não autenticado" });
-          return
-        }
+        res.status(401).json({ error: "Usuário não autenticado" });
+        return;
+      }
       
-      const leads = await this.leadService.getLeads(userId);
+      const leads = await this.leadService.getLeadsByUserId(userId);
       
       res.json({ 
         success: true,
@@ -103,9 +100,8 @@ export class WhatsAppController {
             id: lead.id,
             phone: lead.phone,
             createdAt: lead.createdAt,
-            assistantId: lead.assistantId,
-            assistantName: lead.assistantId || 'N/A',
-            // Você pode adicionar mais campos conforme necessário
+            assistantId: lead.assistant.id,
+            assistantName: lead.assistant.name || 'N/A',
             messageCount: 0, // Isso precisaria vir de outra tabela ou cálculo
             lastMessageAt: null // Isso precisaria vir de outra tabela
           }))

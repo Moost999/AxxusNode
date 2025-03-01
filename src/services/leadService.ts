@@ -1,4 +1,3 @@
-// src/services/leadService.ts
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -17,5 +16,24 @@ export class LeadService {
       where: { assistantId },
       orderBy: { createdAt: 'desc' }
     });
-  } 
+  }
+
+  async getLeadsByUserId(userId: string) {
+    return prisma.lead.findMany({
+      where: {
+        assistant: {
+          userId: userId
+        }
+      },
+      include: {
+        assistant: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
 }

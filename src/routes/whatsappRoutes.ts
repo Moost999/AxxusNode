@@ -14,4 +14,4 @@ export default router;
 
 // Nova rota para buscar todos os leads do usuário
 router.get("/leads/all", authenticate, whatsappController.getAllLeads.bind(whatsappController))
-router.get("/leads/:assistantId", whatsappController.getLeads.bind(whatsappController))
+router.get("/leads", whatsappController.getLeads.bind(whatsappController))
