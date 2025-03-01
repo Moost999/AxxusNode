@@ -35,6 +35,7 @@ model Assistant {
   activeChats    Chat[]   @relation("ActiveChats")
   archivedChats  Chat[]   @relation("ArchivedChats")
   files          File[]
+  leads          Lead[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   userId         String   @db.ObjectId
@@ -81,10 +82,10 @@ model Lead {
   assistantId String   @db.ObjectId
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+   assistant Assistant @relation(fields: [assistantId], references: [id])
 
   // Adicione esta linha para criar a chave única composta
   @@unique([phone, assistantId], name: "phone_assistantId")
 
   // Mantenha o relacionamento se necessário
-  // assistant Assistant @relation(fields: [assistantId], references: [id])
 }

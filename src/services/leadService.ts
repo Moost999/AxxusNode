@@ -17,5 +17,5 @@ export class LeadService {
       where: { assistantId },
       orderBy: { createdAt: 'desc' }
     });
-  }
+  } 
 }

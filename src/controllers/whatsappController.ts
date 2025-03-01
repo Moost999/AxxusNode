@@ -4,6 +4,7 @@ import { MessageProcessingService } from '../services/messageProcessingService';
 import { AssistantService } from '../services/assistantService';
 import { ApiKeyService } from '../services/apiKeyService';
 import { LeadService } from '../services/leadService';
+import { count } from 'console';
 
 export class WhatsAppController {
   private whatsappClient: WhatsAppClient;
@@ -76,6 +77,44 @@ export class WhatsAppController {
       console.error('[ERRO] Ao buscar leads:', error);
       res.status(500).json({ 
         error: 'Erro ao buscar leads',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    }
+  }
+
+  async getAllLeads(req: Request, res: Response) {
+    try {
+      // Extrair o userId do token/sessão
+      // Assumindo que você tenha middleware de autenticação que adiciona user ao req
+      const userId = req.user?.id; 
+      
+      if (!userId) {
+         res.status(401).json({ error: "Usuário não autenticado" });
+          return
+        }
+      
+      const leads = await this.leadService.getLeads(userId);
+      
+      res.json({ 
+        success: true,
+        data: {
+          count: leads.length,
+          leads: leads.map(lead => ({
+            id: lead.id,
+            phone: lead.phone,
+            createdAt: lead.createdAt,
+            assistantId: lead.assistantId,
+            assistantName: lead.assistantId || 'N/A',
+            // Você pode adicionar mais campos conforme necessário
+            messageCount: 0, // Isso precisaria vir de outra tabela ou cálculo
+            lastMessageAt: null // Isso precisaria vir de outra tabela
+          }))
+        }
+      });
+    } catch (error) {
+      console.error('[ERRO] Ao buscar todos os leads:', error);
+      res.status(500).json({ 
+        error: 'Erro ao buscar todos os leads',
         details: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     }
