@@ -5,19 +5,27 @@ const prisma = new PrismaClient();
 
 export class AssistantService {
   async getAssistantById(id: string): Promise<Assistant> {
-    const assistant = await prisma.assistant.findUnique({
+    const assistantData = await prisma.assistant.findUnique({
       where: { id },
       include: { user: true }
     });
-
-    if (!assistant) {
+    
+    if (!assistantData) {
       throw new Error('Assistant não encontrado');
     }
-
-    return {
-      ...assistant,
-      modelType: assistant.model as 'gemini' | 'groq', // Converter o campo model para modelType
-      initialPrompt: assistant.instructions
+    
+    const assistant: Assistant = {
+      id: assistantData.id,
+      name: assistantData.name,
+      initialPrompt: assistantData.instructions,
+      personality: assistantData.personality,
+      modelType: assistantData.model as 'gemini' | 'groq',
+      whatsAppNumber: assistantData.whatsappNumber || undefined,
+      userId: assistantData.userId,
+      createdAt: assistantData.createdAt,
+      updatedAt: assistantData.updatedAt
     };
+    
+    return assistant;
   }
 }

@@ -50,26 +50,41 @@ export class MessageProcessingService {
       const assistant = await this.assistantService.getAssistantById(assistantId);
       const conversationKey = this.getConversationKey(fromNumber, assistantId);
 
-      let conversation = this.conversations.get(conversationKey) || {
-        history: [{
-          role: 'system',
-          content: `Personalidade: ${assistant.initialPrompt}\nInstruções: ${assistant.initialPrompt}`
-        }],
-        fromNumber,
-        assistantId
-      };
+      let conversation = this.conversations.get(conversationKey);
+      
+      // Inicializar nova conversa com prompt do assistant
+      if (!conversation) {
+        conversation = {
+          history: [{
+            role: 'system',
+            // Correção aqui: evita repetir o initialPrompt e usa a propriedade personality se disponível
+            content: `Você é um Assistente Com essa Personalidades ${assistant.personality ? `Personalidade: ${assistant.personality}\n` : ''}Instruções: ${assistant.initialPrompt}`
+          }],
+          fromNumber,
+          assistantId
+        };
+      }
 
+      // Adicionar mensagem do usuário
       conversation.history.push({ role: 'user', content: message });
       
+      // Obter resposta do modelo usando o método getModelResponse
       const aiResponse = await this.getModelResponse(assistant, conversation.history);
       
+      // Adicionar resposta ao histórico
       conversation.history.push({ role: 'assistant', content: aiResponse });
       this.conversations.set(conversationKey, conversation);
 
       return aiResponse;
     } catch (error) {
       console.error('Erro no processamento:', error);
-      return 'Erro: Verifique suas chaves de API configuradas';
+      // Mensagem de erro mais informativa
+      if (error instanceof Error) {
+        if (error.message.includes('API key')) {
+          return 'Erro: Verifique suas chaves de API configuradas na conta.';
+        }
+      }
+      return 'Desculpe, ocorreu um erro ao processar sua mensagem.';
     }
   }
 }
