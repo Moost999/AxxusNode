@@ -42,6 +42,8 @@ class AuthController {
           email,
           password: hashedPassword,
           availableMessages: 10, // Mensagens iniciais gratuitas
+          geminiApiKey: null,
+          groqApiKey: null
         },
         select: {
           id: true,
