@@ -17,8 +17,8 @@ model User {
   adViews           Int            @default(0)
   lastAdView        DateTime?
   adCooldown        Int            @default(24)
-  geminiApiKey      String?        @unique
-  groqApiKey        String?        @unique
+  geminiApiKey      String?        
+  groqApiKey        String?        
   assistants        Assistant[]
   notifications     Notification[]
   createdAt         DateTime       @default(now())
