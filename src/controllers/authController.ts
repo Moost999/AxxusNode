@@ -51,6 +51,8 @@ class AuthController {
           email: true,
           createdAt: true,
           availableMessages: true,
+          geminiApiKey: true,
+          groqApiKey: true,
         },
       })
 
