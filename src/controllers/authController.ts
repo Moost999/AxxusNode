@@ -31,7 +31,7 @@ class AuthController {
         })
         return
       }
-      
+
       console.log("Tentativa de Cadastro:", { email })
 
       // Hash da senha
@@ -42,6 +42,7 @@ class AuthController {
         data: {
           name,
           email,
+          tokens: 50,
           password: hashedPassword,
           availableMessages: 10, // Mensagens iniciais gratuitas
           geminiApiKey: '',
