@@ -31,6 +31,8 @@ class AuthController {
         })
         return
       }
+      
+      console.log("Tentativa de Cadastro:", { email })
 
       // Hash da senha
       const hashedPassword = await bcrypt.hash(password, 10)
