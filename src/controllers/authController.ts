@@ -44,7 +44,7 @@ class AuthController {
           email,
           tokens: 100,
           password: hashedPassword,
-          availableMessages: 10, // Mensagens iniciais gratuitas
+          availableMessages: 30, // Mensagens iniciais gratuitas
           geminiApiKey: '',
           groqApiKey: ''
         },
