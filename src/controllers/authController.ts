@@ -42,7 +42,7 @@ class AuthController {
         data: {
           name,
           email,
-          tokens: 50,
+          tokens: 100,
           password: hashedPassword,
           availableMessages: 10, // Mensagens iniciais gratuitas
           geminiApiKey: '',
