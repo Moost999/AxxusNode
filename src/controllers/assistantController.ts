@@ -24,6 +24,35 @@ class AssistantController {
         return
       }
 
+      // Validação de tokens - verificar se o usuário tem tokens suficientes
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { tokens: true },
+      })
+
+      if (!user || user.tokens < 100) {
+        res.status(400).json({
+          error: "Tokens insuficientes",
+          details: "Você precisa de pelo menos 100 tokens para criar um assistente",
+        })
+        return
+      }
+
+      // Validação do tamanho das instruções (300 caracteres ~ 75 tokens)
+      if (instructions && instructions.length > 300) {
+        res.status(400).json({
+          error: "Limite de caracteres excedido",
+          details: "As instruções não podem exceder 300 caracteres.",
+        })
+        return
+      }
+
+      // Deduzir 100 tokens do usuário
+      await prisma.user.update({
+        where: { id: userId },
+        data: { tokens: { decrement: 100 } },
+      })
+
       // Add token validation
 
       const newAssistant = await prisma.assistant.create({
@@ -140,14 +169,11 @@ class AssistantController {
 
       // Add token validation if instructions are being updated
       if (req.body.instructions) {
-        const MAX_TOKENS = 100
-        // Simple approximation: ~4 chars per token
-        const tokenCount = Math.ceil(req.body.instructions.length / 4)
-
-        if (tokenCount > MAX_TOKENS) {
+        // Aumentar o limite para 300 caracteres
+        if (req.body.instructions.length > 300) {
           res.status(400).json({
-            error: "Limite de tokens excedido",
-            details: `As instruções não podem exceder ${MAX_TOKENS} tokens.`,
+            error: "Limite de caracteres excedido",
+            details: "As instruções não podem exceder 300 caracteres.",
           })
           return
         }

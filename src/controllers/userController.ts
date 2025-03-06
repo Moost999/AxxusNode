@@ -16,6 +16,7 @@ class UserController {
     }
   }
 
+
   // Método para trocar tokens por mensagens
   async convertTokensToMessages(req: Request, res: Response) {
     try {
