@@ -10,7 +10,7 @@ const router = Router();
 // Altere a rota para usar o userId do token (não da URL)
 router.post('/create-assistant',authenticate, assistantController.createAssistant);
 router.get('/user/me', authenticate, assistantController.getAssistants); // Nova rota router.get('/:id', assistantController.getAssistantById);
-router.patch('/up', assistantController.updateAssistant);
-router.delete('/:id', assistantController.deleteAssistant);
+router.patch('/up', authenticate, assistantController.updateAssistant);
+router.delete('/:id', authenticate, assistantController.deleteAssistant);
 
 export default router;
