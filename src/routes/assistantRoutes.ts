@@ -11,6 +11,6 @@ const router = Router();
 router.post('/create-assistant',authenticate, assistantController.createAssistant);
 router.get('/user/me', authenticate, assistantController.getAssistants); // Nova rota router.get('/:id', assistantController.getAssistantById);
 router.patch('/up', assistantController.updateAssistant);
-router.delete('/delete', assistantController.deleteAssistant);
+router.delete('/:id', assistantController.deleteAssistant);
 
 export default router;
