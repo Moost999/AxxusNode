@@ -25,17 +25,6 @@ class AssistantController {
       }
 
       // Add token validation
-      const MAX_TOKENS = 100
-      // Simple approximation: ~4 chars per token
-      const tokenCount = Math.ceil((instructions?.length || 0) / 4)
-
-      if (tokenCount > MAX_TOKENS) {
-        res.status(400).json({
-          error: "Limite de tokens excedido",
-          details: `As instruções não podem exceder ${MAX_TOKENS} tokens.`,
-        })
-        return
-      }
 
       const newAssistant = await prisma.assistant.create({
         data: {
