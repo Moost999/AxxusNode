@@ -24,6 +24,8 @@ router.get("/userProfile", async (req, res) => {
         select: { id: true, name: true, email: true, createdAt: true, availableMessages: true, geminiApiKey: true, groqApiKey: true } });
         res.json(user);
         
+    } catch (error) {
+        res.status(500).json({ error: "Erro ao buscar usuário" });
     }
 }); // Adicionado: rota para obter mensagens
 export default router;
