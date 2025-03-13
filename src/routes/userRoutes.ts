@@ -1,7 +1,9 @@
 import express from "express";
 import { userController } from "../controllers/userController";
 import { authenticate } from "../middleware/auth";
+import { Prisma, PrismaClient } from "@prisma/client";
 
+const prisma = new PrismaClient();
 const router = express.Router();
 
 // Rotas protegidas (requerem autenticação)
@@ -15,5 +17,13 @@ router.post("/convert-tokens", userController.convertTokensToMessages); // Corri
 
 // Rota para obter a quantidade de tokens do usuário
 router.get("/tokens", userController.getTokens); // Adicionado: rota para obter tokens
-
+router.get("/userProfile", async (req, res) => {
+    try {
+        const userId = req.userId;
+        const user = await prisma.user.findUnique({ where: { id: userId }, 
+        select: { id: true, name: true, email: true, createdAt: true, availableMessages: true, geminiApiKey: true, groqApiKey: true } });
+        res.json(user);
+        
+    }
+}); // Adicionado: rota para obter mensagens
 export default router;
