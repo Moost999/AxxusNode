@@ -170,7 +170,7 @@ class AssistantController {
       // Add token validation if instructions are being updated
       if (req.body.instructions) {
         // Aumentar o limite para 300 caracteres
-        if (req.body.instructions.length > 1500) {
+        if (req.body.instructions.length > 4000) {
           res.status(400).json({
             error: "Limite de caracteres excedido",
             details: "As instruções não podem exceder 300 caracteres.",
